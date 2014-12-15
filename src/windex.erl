@@ -45,7 +45,7 @@ doLookup([Label | Rest], {Node, _Data}) when is_map(Node) ->
         doLookup(Rest, NewNode).
 
 convertNode(Value) when is_map(Value) -> {doMakeTree(Value), []};
-convertNode(Value) when is_list(Value) -> {#{}, Value}.
+convertNode(Value) when is_list(Value) -> {#{}, lists:usort(Value)}.
 
 makeTree(Revision) when is_map(Revision) -> {doMakeTree(Revision), []}.
 doMakeTree(Revision) when is_map(Revision) ->
