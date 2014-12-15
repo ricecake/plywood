@@ -47,7 +47,7 @@ doMakeTree(Revision) when is_map(Revision) ->
         maps:map(fun(_Key, Value) -> convertNode(Value) end, Revision).
 
 mergeTrees({LsubTree, Ldata}, {RsubTree, Rdata}) ->
-        NewData = lists:append(Ldata, Rdata),
+        NewData = lists:umerge(Ldata, Rdata),
         {hashMerge(LsubTree, RsubTree), NewData}.
 
 hashMerge(Left, Right) when is_map(Left), is_map(Right) -> hashMerge(Left, maps:to_list(Right));
