@@ -7,6 +7,8 @@
 -export([content_types_accepted/2]).
 -export([resource_exists/2]).
 
+-export([lookup/2, insert/2]).
+
 init(Req, Opts) ->
 	{cowboy_rest, Req, Opts}.
 
@@ -44,4 +46,13 @@ insert(Req, State) ->
 			{true, Req2, State}
 	end.
 
-lookup(Req, Index) -> { <<"OK">>, Req, Index }.
+lookup(Req, Index) ->
+        io:format("~p~n", [{Req, Index, cowboy_req:path_info(Req)}]),
+        Path = cowboy_req:path_info(Req),
+        try windex:lookup(Index, Path) of
+                Data ->
+                        Result = windex:export(Data),
+                        { jiffy:encode(Result), Req, Index }
+        catch
+                Exception:Reason -> {"Null", Req, Index}
+        end.

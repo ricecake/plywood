@@ -10,8 +10,10 @@
 
 start() -> application:ensure_all_started(windex).
 
-lookup(Index, Key) ->
+lookup(Index, Key) when is_binary(Key) ->
         KeyParts = binary:split(Key, <<"/">>, [global]),
+        lookup(Index, KeyParts);
+lookup(Index, KeyParts) when is_list(KeyParts) ->
         {ok, RootNode} = windex_db:fetch(primary_tree, Index),
         doLookup(KeyParts, RootNode).
 
