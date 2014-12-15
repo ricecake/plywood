@@ -10,7 +10,15 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-    windex_sup:start_link().
+    {ok, Pid} = windex_sup:start_link(),
+    Dispatch = cowboy_router:compile([
+	    {'_', [
+			{"/t/:index/[...]", windex_wh, []}
+		]}
+	]),
+	{ok, _} = cowboy:start_http(http, 25, [{ip, {127,0,0,1}}, {port, 8080}],
+        				[{env, [{dispatch, Dispatch}]}]),
+	{ok, Pid}.
 
 stop(_State) ->
     ok.

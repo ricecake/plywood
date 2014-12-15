@@ -1,4 +1,4 @@
--module(windex_sup).
+-module(windex_storage_sup).
 
 -behaviour(supervisor).
 
@@ -9,7 +9,7 @@
 -export([init/1]).
 
 %% Helper macro for declaring children of supervisor
--define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
+-define(CHILD(I, Args), {I, {I, start_link, Args}, permanent, 5000, worker, [I]}).
 
 %% ===================================================================
 %% API functions
@@ -24,6 +24,6 @@ start_link() ->
 
 init([]) ->
         {ok, { {one_for_one, 5, 10}, [
-                ?CHILD(windex_storage_sup, supervisor)
+                ?CHILD(windex_db, [primary_tree])
         ]} }.
 

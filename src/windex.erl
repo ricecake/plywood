@@ -1,10 +1,14 @@
 -module(windex).
 
+-export([start/0]).
 -export([lookup/2, add/2, delete/2, deleteByValue/2, export/1]).
+
 -compile(export_all).
 %% ------------------------------------------------------------------
 %% API Function Definitions
 %% ------------------------------------------------------------------
+
+start() -> application:ensure_all_started(windex).
 
 lookup(Index, Key) ->
         KeyParts = binary:split(Key, <<"/">>, [global]),
