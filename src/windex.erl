@@ -19,7 +19,10 @@ add(Index, Rev) when is_map(Rev) ->
         end,
         windex_db:store(primary_tree, Index, NewTree).
 
-delete(Index, Rev) -> ok.
+delete(Index, Rev) when is_map(Rev) ->
+        RevTree = makeTree(Rev),
+        {ok, FullTree} = windex_db:fetch(primary_tree, Index),
+        windex_db:store(primary_tree, Index, demergeTrees(FullTree, RevTree)).
 
 deleteByValue(Index, Value) -> ok.
 
@@ -63,3 +66,20 @@ hashMerge(Left, [{Key, Value} |Rest]) when is_map(Left) ->
 
 compactNode(Node) when is_map(Node) ->
         maps:from_list([ {K, V} || {K, V} <- maps:to_list(Node), V =/= {#{}, []}]).
+
+demergeTrees({LsubTree, Ldata}, {RsubTree, Rdata}) ->
+        NewData = remove(Ldata, Rdata),
+        NewSubTree = hashDelete(LsubTree, RsubTree),
+        {compactNode(NewSubTree), NewData}.
+
+hashDelete(Left, Right) when is_map(Left), is_map(Right) -> hashDelete(Left, maps:to_list(Right));
+hashDelete(Left, [])    when is_map(Left) -> Left;
+hashDelete(Left, [{Key, Value} |Rest]) when is_map(Left) ->
+        NewValue = case maps:find(Key, Left) of
+                error -> Value;
+                {ok, LeftValue} -> demergeTrees(LeftValue, Value)
+        end,
+        hashDelete(maps:put(Key, NewValue, Left), Rest).
+
+remove(From, Items) when is_list(From), is_list(Items) ->
+        ordsets:to_list(ordsets:subtract(ordsets:from_list(From), ordsets:from_list(Items))).
