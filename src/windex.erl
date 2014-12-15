@@ -1,6 +1,6 @@
 -module(windex).
 
--export([lookup/2, add/2, delete/2, export/1]).
+-export([lookup/2, add/2, delete/2, deleteByValue/2, export/1]).
 -compile(export_all).
 %% ------------------------------------------------------------------
 %% API Function Definitions
@@ -20,6 +20,8 @@ add(Index, Rev) when is_map(Rev) ->
         windex_db:store(primary_tree, Index, NewTree).
 
 delete(Index, Rev) -> ok.
+
+deleteByValue(Index, Value) -> ok.
 
 export({SubTree, Data}) when is_map(SubTree)->
         #{
@@ -44,7 +46,7 @@ convertNode(Value) when is_list(Value) -> {#{}, Value}.
 
 makeTree(Revision) when is_map(Revision) -> {doMakeTree(Revision), []}.
 doMakeTree(Revision) when is_map(Revision) ->
-        maps:map(fun(_Key, Value) -> convertNode(Value) end, Revision).
+        compactNode(maps:map(fun(_Key, Value) -> convertNode(Value) end, Revision)).
 
 mergeTrees({LsubTree, Ldata}, {RsubTree, Rdata}) ->
         NewData = lists:umerge(Ldata, Rdata),
@@ -58,3 +60,6 @@ hashMerge(Left, [{Key, Value} |Rest]) when is_map(Left) ->
                 {ok, LeftValue} -> mergeTrees(LeftValue, Value)
         end,
         hashMerge(maps:put(Key, NewValue, Left), Rest).
+
+compactNode(Node) when is_map(Node) ->
+        maps:from_list([ {K, V} || {K, V} <- maps:to_list(Node), V =/= {#{}, []}]).
