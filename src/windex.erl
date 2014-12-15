@@ -1,6 +1,6 @@
 -module(windex).
 
--export([lookup/2, add/2, delete/2]).
+-export([lookup/2, add/2, delete/2, export/1]).
 -compile(export_all).
 %% ------------------------------------------------------------------
 %% API Function Definitions
@@ -21,6 +21,14 @@ add(Index, Rev) when is_map(Rev) ->
 
 delete(Index, Rev) -> ok.
 
+export({SubTree, Data}) when is_map(SubTree)->
+        #{
+                data    => Data,
+                subtree => maps:map(fun(_Key, Value) -> export(Value) end, SubTree)
+        };
+export(Index) ->
+        {ok, RootNode} = windex_db:fetch(primary_tree, Index),
+        export(RootNode).
 %% ------------------------------------------------------------------
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
