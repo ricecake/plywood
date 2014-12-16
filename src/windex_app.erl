@@ -17,7 +17,10 @@ start(_StartType, _StartArgs) ->
 		]}
 	]),
 	{ok, _} = cowboy:start_http(http, 25, [{ip, {127,0,0,1}}, {port, 8080}],
-        				[{env, [{dispatch, Dispatch}]}]),
+        				[
+						{compress, true},
+						{env, [{dispatch, Dispatch}]}
+					]),
 	{ok, Pid}.
 
 stop(_State) ->
