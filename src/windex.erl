@@ -32,14 +32,17 @@ delete(Index, Rev) when is_map(Rev) ->
 
 deleteByValue(Index, Value) -> ok.
 
-export({SubTree, Data}) when is_map(SubTree)->
-        #{
-                data    => Data,
-                subtree => maps:map(fun(_Key, Value) -> export(Value) end, SubTree)
-        };
+export({SubTree, Data} = Node) when is_map(SubTree)-> export([], Node);
 export(Index) ->
         {ok, RootNode} = windex_db:fetch(primary_tree, Index),
         export(RootNode).
+
+export([], {SubTree, Data} = Node) when is_map(SubTree)-> prepExport(<<"/">>, [], Node);
+export([Name |Rest], {SubTree, Data} = Node) when is_map(SubTree)-> prepExport(Name, Rest, Node);
+export(Path, Index) ->
+        {ok, RootNode} = windex_db:fetch(primary_tree, Index),
+        export(Path, RootNode).
+
 %% ------------------------------------------------------------------
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
@@ -89,3 +92,27 @@ hashDelete(Left, [{Key, Value} |Rest]) when is_map(Left) ->
 
 remove(From, Items) when is_list(From), is_list(Items) ->
         ordsets:to_list(ordsets:subtract(ordsets:from_list(From), ordsets:from_list(Items))).
+
+makeNodeID([], _Sep) -> <<"/">>;
+makeNodeID([<<"/">>], _Sep) -> <<"/">>;
+makeNodeID(Parts, Sep) -> << << Sep/binary, Part/binary>> || Part <- Parts, Part =/= <<"/">> >>.
+
+prepExport(Name, Path, {SubTree, []})->
+	#{
+		id   => makeNodeID(lists:reverse([Name |Path]), <<"/">>),
+		name => Name,
+		children => [ prepExport(Key, [Name |Path], Value) || {Key, Value} <-maps:to_list(SubTree)]
+	};
+prepExport(Name, Path, {#{}, Data})  ->
+	#{
+		id   => makeNodeID(lists:reverse([Name |Path]), <<"/">>),
+		name => Name,
+		data => Data
+	};
+prepExport(Name, Path, {SubTree, Data}) ->
+	#{
+		id   => makeNodeID(lists:reverse([Name |Path]), <<"/">>),
+		name => Name,
+		data => Data,
+		children => [ prepExport(Key, [Name |Path], Value) || {Key, Value} <-maps:to_list(SubTree)]
+	}.

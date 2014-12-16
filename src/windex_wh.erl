@@ -28,7 +28,7 @@ lookup(Index, Path, Req) ->
 
         try windex:lookup(Index, Path) of
                 Data ->
-                        Result = windex:export(Data),
+                        Result = windex:export(lists:reverse(Path), Data),
                         cowboy_req:reply(200, [], jiffy:encode(Result), Req)
         catch
                 Exception:Reason -> cowboy_req:reply(500, [], <<"Error">>, Req)
