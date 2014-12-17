@@ -36,7 +36,7 @@ lookup(Index, Path, Req) ->
                 Data ->
                         Result = windex:export(lists:reverse(Path), Data),
                         cowboy_req:reply(200, [
-					{<<"content-type">>, <<"text/json; charset=utf-8">>}
+%					{<<"content-type">>, <<"text/json; charset=utf-8">>}
 				], jiffy:encode(Result), Req)
         catch
                 Exception:Reason -> cowboy_req:reply(500, [], <<"Error">>, Req)
