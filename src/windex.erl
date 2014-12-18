@@ -30,15 +30,15 @@ delete(Index, Rev) when is_map(Rev) ->
         {ok, FullTree} = windex_db:fetch(primary_tree, Index),
         windex_db:store(primary_tree, Index, demergeTrees(FullTree, RevTree)).
 
-deleteByValue(Index, Value) -> ok.
+deleteByValue(_Index, _Value) -> ok.
 
-export({SubTree, Data} = Node) when is_map(SubTree)-> export([], Node);
+export({SubTree, _Data} = Node) when is_map(SubTree)-> export([], Node);
 export(Index) ->
         {ok, RootNode} = windex_db:fetch(primary_tree, Index),
         export(RootNode).
 
-export([], {SubTree, Data} = Node) when is_map(SubTree)-> prepExport(<<"/">>, [], Node);
-export([Name |Rest], {SubTree, Data} = Node) when is_map(SubTree)-> prepExport(Name, Rest, Node);
+export([], {SubTree, _Data} = Node) when is_map(SubTree)-> prepExport(<<"/">>, [], Node);
+export([Name |Rest], {SubTree, _Data} = Node) when is_map(SubTree)-> prepExport(Name, Rest, Node);
 export(Path, Index) ->
         {ok, RootNode} = windex_db:fetch(primary_tree, Index),
         export(Path, RootNode).

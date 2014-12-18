@@ -39,13 +39,13 @@ lookup(Index, Path, Req) ->
 %					{<<"content-type">>, <<"text/json; charset=utf-8">>}
 				], jiffy:encode(Result), Req)
         catch
-                Exception:Reason -> cowboy_req:reply(500, [], <<"Error">>, Req)
+                _Exception:_Reason -> cowboy_req:reply(500, [], <<"Error">>, Req)
         end.
 
 insert(Index, Data, Req) ->
-	ok = windex:add(Index, jiffy:decode(Data, [return_maps])),
+        ok = windex_worker:add(Index, Data),
 	cowboy_req:reply(200, Req).
 
 remove(Index, Data, Req) ->
-	ok = windex:delete(Index, jiffy:decode(Data, [return_maps])),
+	ok = windex_worker:delete(Index, Data),
 	cowboy_req:reply(200, Req).
