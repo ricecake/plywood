@@ -20,17 +20,12 @@ simple HTTP Restful semantics.
 Requirements for end-users
 ==========================
 
-Erlang Version 17 was used for the development, we
-expect that some lower versions will support this
-software as well. For some of the scripts you will
-need some other languages such as a modern Perl5,
-but they are not necessary for the function of the
-server.
+Erlang Version 17+ is required.
+For some of the scripts you will need some other languages such as a modern Perl5,
+but they are not necessary for the function of the server.
 
 Setting up and building
 =======================
-
-  # TODO: Everything here is from the demo version
 
   git clone https://github.com/ricecake/windex.git
   cd windex
