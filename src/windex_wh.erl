@@ -16,13 +16,13 @@ process(<<"GET">>, _Body, Req) ->
 	lookup(Index, Path, Req);
 process(<<"PUT">>, true, Req) ->
 	Index = cowboy_req:binding(index, Req),
-	{ok, Data, Req2} = cowboy_req:body(Req),
+	{ok, Data, Req2} = cowboy_req:body(Req, [{length, 100000000}]),
 	insert(Index, Data, Req2);
 process(<<"PUT">>, false, Req) ->
 	cowboy_req:reply(400, [], <<"Missing body.">>, Req);
 process(<<"DELETE">>, true, Req) ->
 	Index = cowboy_req:binding(index, Req),
-	{ok, Data, Req2} = cowboy_req:body(Req),
+	{ok, Data, Req2} = cowboy_req:body(Req, [{length, 100000000}]),
 	remove(Index, Data, Req2);
 process(<<"DELETE">>, false, Req) ->
 	cowboy_req:reply(400, [], <<"Missing body.">>, Req);
