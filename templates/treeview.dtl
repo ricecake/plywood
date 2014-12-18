@@ -19,6 +19,7 @@ path.link {
   fill: none;
   stroke: #9ecae1;
   stroke-width: 1.5px;
+  display: none;
 }
 
 </style>
@@ -36,7 +37,19 @@ var i = 0,
     root;
 
 var tree = d3.layout.tree()
-    .nodeSize([0, 20]);
+    .nodeSize([0, 20])
+    .sort(function (a, b) {
+	if ((a.children || a._children) && (b.children || b._children)) {
+		return a.name.localeCompare(b.name);
+	}
+	else if (a.children || a._children) {
+		return -1;
+	}
+	else if (b.children || b._children) {
+		return 1;
+	}
+	return a.name.localeCompare(b.name);
+    });
 
 var diagonal = d3.svg.diagonal()
     .projection(function(d) { return [d.y, d.x]; });
@@ -49,6 +62,13 @@ var svg = d3.select("body").append("svg")
 d3.json("tree/{{ index }}", function(error, flare) {
   flare.x0 = 0;
   flare.y0 = 0;
+  function toggleAll(d) {
+    if (d.children) {
+      d.children.forEach(toggleAll);
+      toggle(d);
+    }
+  }
+  flare.children.forEach(toggleAll);
   update(root = flare);
 });
 
@@ -152,6 +172,9 @@ function update(source) {
 
 // Toggle children on click.
 function click(d) {
+	if (d.data) {
+		console.log(d.data);
+	}
   if (d.children) {
     d._children = d.children;
     d.children = null;
@@ -165,5 +188,16 @@ function click(d) {
 function color(d) {
   return d._children ? "#3182bd" : d.children ? "#c6dbef" : "#fd8d3c";
 }
+function toggle(d) {
 
+  // I could retrieve the child nodes here, but how to add them to the tree?
+
+  if (d.children) {
+    d._children = d.children;
+    d.children = null;
+  } else {
+    d.children = d._children;
+    d._children = null;
+  }
+}
 </script>
