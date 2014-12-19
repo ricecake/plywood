@@ -26,6 +26,6 @@ getWorker() -> supervisor:start_child(?MODULE, []).
 
 init([]) ->
         {ok, { {simple_one_for_one, 5, 10}, [
-                ?CHILD(windex_worker, supervisor)
+                ?CHILD(windex_worker, worker)
         ]} }.
 
