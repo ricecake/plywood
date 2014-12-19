@@ -28,10 +28,15 @@ Setting up and building
 =======================
 
   git clone https://github.com/ricecake/plywood.git
+
   cd plywood
+
   ./rebar get-deps co
+
   erl -pa ebin/ -pa deps/*/ebin
-    #you will now be in the erlang shell
+
+  #you will now be in the erlang shell
+
   application:ensure_all_started(plywood).
 
 Basic Usage
