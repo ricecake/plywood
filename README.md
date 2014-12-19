@@ -1,4 +1,4 @@
-Windex
+Plywood
 ======
 
 Hierarchical data storage and retrieval
@@ -12,7 +12,7 @@ instructions below are bound to change drastically
 Overview
 ========
 
-Windex provides a simple web interface to store JSON
+Plywood provides a simple web interface to store JSON
 objects that are in a tree format and then search on
 and retrieve information from that structure with
 simple HTTP Restful semantics.
