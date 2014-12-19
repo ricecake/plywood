@@ -14,9 +14,10 @@ start(_StartType, _StartArgs) ->
     Dispatch = cowboy_router:compile([
 	    {'_', [
 			{"/tree/:index/[...]", windex_wh, []},
-			{"/:index", windex_viz, []},
-			{"/js/[...]", cowboy_static, {priv_dir, windex, "js/"}},
-			{"/css/[...]", cowboy_static, {priv_dir, windex, "css/"}}
+			{"/view/:index", windex_viz, []},
+			{"/[...]",     cowboy_static, {priv_dir, windex, "html/"}},
+			{"/js/[...]",  cowboy_static, {priv_dir, windex, "js/"  }},
+			{"/css/[...]", cowboy_static, {priv_dir, windex, "css/" }}
 		]}
 	]),
 	{ok, _} = cowboy:start_http(http, 25, [{ip, {127,0,0,1}}, {port, 8080}],
