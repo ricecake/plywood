@@ -27,12 +27,12 @@ but they are not necessary for the function of the server.
 Setting up and building
 =======================
 
-  git clone https://github.com/ricecake/windex.git
-  cd windex
+  git clone https://github.com/ricecake/plywood.git
+  cd plywood
   ./rebar get-deps co
   erl -pa ebin/ -pa deps/*/ebin
     #you will now be in the erlang shell
-  application:ensure_all_started(windex).
+  application:ensure_all_started(plywood).
 
 Basic Usage
 ===========
@@ -62,7 +62,7 @@ Output
 ======
 
 Once you get this far you'll be able to start pulling
-data out of windex. The structure is basically as such:
+data out of plywood. The structure is basically as such:
 
 {"name":"asdf","id":"/asdf","children":
   [{"name":"test1","id":"/asdf/test1","data":
