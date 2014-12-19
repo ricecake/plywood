@@ -1,4 +1,4 @@
--module(windex).
+-module(plywood).
 
 -export([start/0]).
 -export([lookup/2, add/2, delete/2, deleteByValue/2, export/1]).
@@ -8,39 +8,39 @@
 %% API Function Definitions
 %% ------------------------------------------------------------------
 
-start() -> application:ensure_all_started(windex).
+start() -> application:ensure_all_started(plywood).
 
 lookup(Index, Key) when is_binary(Key) ->
         KeyParts = binary:split(Key, <<"/">>, [global]),
         lookup(Index, KeyParts);
 lookup(Index, KeyParts) when is_list(KeyParts) ->
-        {ok, RootNode} = windex_db:fetch(primary_tree, Index),
+        {ok, RootNode} = plywood_db:fetch(primary_tree, Index),
         doLookup(KeyParts, RootNode).
 
 add(Index, Rev) when is_map(Rev) ->
         RevTree = makeTree(Rev),
-        NewTree = case windex_db:getIfExists(primary_tree, Index) of
+        NewTree = case plywood_db:getIfExists(primary_tree, Index) of
                 false -> RevTree;
                 {ok, FullTree} -> mergeTrees(FullTree, RevTree)
         end,
-        windex_db:store(primary_tree, Index, NewTree).
+        plywood_db:store(primary_tree, Index, NewTree).
 
 delete(Index, Rev) when is_map(Rev) ->
         RevTree = makeTree(Rev),
-        {ok, FullTree} = windex_db:fetch(primary_tree, Index),
-        windex_db:store(primary_tree, Index, demergeTrees(FullTree, RevTree)).
+        {ok, FullTree} = plywood_db:fetch(primary_tree, Index),
+        plywood_db:store(primary_tree, Index, demergeTrees(FullTree, RevTree)).
 
 deleteByValue(_Index, _Value) -> ok.
 
 export({SubTree, _Data} = Node) when is_map(SubTree)-> export([], Node);
 export(Index) ->
-        {ok, RootNode} = windex_db:fetch(primary_tree, Index),
+        {ok, RootNode} = plywood_db:fetch(primary_tree, Index),
         export(RootNode).
 
 export([], {SubTree, _Data} = Node) when is_map(SubTree)-> prepExport(<<"/">>, [], Node);
 export([Name |Rest], {SubTree, _Data} = Node) when is_map(SubTree)-> prepExport(Name, Rest, Node);
 export(Path, Index) ->
-        {ok, RootNode} = windex_db:fetch(primary_tree, Index),
+        {ok, RootNode} = plywood_db:fetch(primary_tree, Index),
         export(Path, RootNode).
 
 %% ------------------------------------------------------------------

@@ -1,4 +1,4 @@
-{application, windex,
+{application, plywood,
  [
   {description, ""},
   {vsn, "1"},
@@ -8,6 +8,6 @@
                   stdlib,
                   cowboy
                  ]},
-  {mod, { windex_app, []}},
+  {mod, { plywood_app, []}},
   {env, []}
  ]}.

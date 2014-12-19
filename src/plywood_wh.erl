@@ -1,4 +1,4 @@
--module(windex_wh).
+-module(plywood_wh).
 
 %% Standard callbacks.
 -export([init/2]).
@@ -32,9 +32,9 @@ process(_, _, Req) ->
 
 lookup(Index, Path, Req) ->
 
-        try windex:lookup(Index, Path) of
+        try plywood:lookup(Index, Path) of
                 Data ->
-                        Result = windex:export(lists:reverse(Path), Data),
+                        Result = plywood:export(lists:reverse(Path), Data),
                         cowboy_req:reply(200, [
 %					{<<"content-type">>, <<"text/json; charset=utf-8">>}
 				], jiffy:encode(Result), Req)
@@ -43,9 +43,9 @@ lookup(Index, Path, Req) ->
         end.
 
 insert(Index, Data, Req) ->
-        ok = windex_worker:add(Index, Data),
+        ok = plywood_worker:add(Index, Data),
 	cowboy_req:reply(200, Req).
 
 remove(Index, Data, Req) ->
-	ok = windex_worker:delete(Index, Data),
+	ok = plywood_worker:delete(Index, Data),
 	cowboy_req:reply(200, Req).

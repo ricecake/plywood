@@ -1,4 +1,4 @@
--module(windex_worker).
+-module(plywood_worker).
 -behaviour(gen_server).
 -define(SERVER, ?MODULE).
 
@@ -23,7 +23,7 @@ start_link() ->
     gen_server:start_link(?MODULE, [], []).
 
 add(Index, Data) ->
-        {ok, Pid} = windex_work_sup:getWorker(),
+        {ok, Pid} = plywood_work_sup:getWorker(),
         add(Pid, Index, Data).
 
 add(Pid, Index, Data) ->
@@ -33,7 +33,7 @@ add(Pid, Index, Data, Timeout) ->
         gen_server:call(Pid, {add, Index, Data}, Timeout).
 
 delete(Index, Data) ->
-        {ok, Pid} = windex_work_sup:getWorker(),
+        {ok, Pid} = plywood_work_sup:getWorker(),
         delete(Pid, Index, Data).
 
 delete(Pid, Index, Data) ->
@@ -50,10 +50,10 @@ init(Args) ->
         {ok, Args}.
 
 handle_call({add, Index, Data}, _From, State) ->
-        ok = windex:add(Index, jiffy:decode(Data, [return_maps])),
+        ok = plywood:add(Index, jiffy:decode(Data, [return_maps])),
         {stop, normal, ok, State};
 handle_call({delete, Index, Data}, _From, State) ->
-        ok = windex:delete(Index, jiffy:decode(Data, [return_maps])),
+        ok = plywood:delete(Index, jiffy:decode(Data, [return_maps])),
         {stop, normal, ok, State};
 handle_call(_Request, _From, State) ->
         {reply, ok, State}.

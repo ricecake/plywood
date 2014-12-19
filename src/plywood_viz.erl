@@ -1,4 +1,4 @@
--module(windex_viz).
+-module(plywood_viz).
 
 -export([init/2]).
 

@@ -1,4 +1,4 @@
--module(windex_db).
+-module(plywood_db).
 
 -export([start_link/1, start_link/2]).
 -export([open/1, open/2, close/1, store/3, fetch/2, exists/2, getIfExists/2]).
