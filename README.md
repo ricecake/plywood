@@ -33,7 +33,7 @@ Setting up and building
 
   ./rebar get-deps co
 
-  erl -pa ebin/ -pa deps/*/ebin
+  erl -pa ../plywood/ebin/ -pa ../plywood/deps/*/ebin
 
   #you will now be in the erlang shell
 
