@@ -7,7 +7,9 @@ WARNING
 =======
 
 This is early alpha software at this point, the
-instructions below are bound to change drastically
+instructions below are bound to change drastically,
+and until we remove this warning please assume that
+this software is not production ready.
 
 Overview
 ========
