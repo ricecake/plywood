@@ -1,7 +1,7 @@
 Plywood
 =======
 
-Hierarchical data storage and retrieval
+Hierarchical data storage and retrieval server
 
 WARNING
 =======
@@ -12,10 +12,10 @@ instructions below are bound to change drastically
 Overview
 ========
 
-Plywood provides a simple web interface to store JSON
-objects that are tree structured and then search on
-and retrieve information from that structure with
-simple HTTP Restful semantics.
+The Plywood database server provides a simple web 
+interface to store JSON objects that are tree
+structured and then search on and retrieve information
+from that structure with simple HTTP Restful semantics.
 
 Requirements for end-users
 ==========================
