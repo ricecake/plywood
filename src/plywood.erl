@@ -1,7 +1,13 @@
 -module(plywood).
 
+%% Setup exports
 -export([start/0]).
--export([lookup/2, add/2, delete/2, deleteByValue/2, export/1]).
+
+%% Lookup/update exports
+-export([lookup/2, add/2, delete/2, deleteByValue/2]).
+
+%% Processing exports
+-export([export/1, export/2, truncate/2]).
 
 -compile(export_all).
 %% ------------------------------------------------------------------
@@ -31,6 +37,10 @@ delete(Index, Rev) when is_map(Rev) ->
         plywood_db:store(primary_tree, Index, demergeTrees(FullTree, RevTree)).
 
 deleteByValue(_Index, _Value) -> ok.
+
+truncate({SubTree, _Data} = Node, Depth) when is_map(SubTree)->
+        Truncator = fun(D,P) when length(P) < Depth -> {continue, D}; ({_,D},_)-> {done, {#{}, D}} end,
+        transform(Truncator, Node, []).
 
 export({SubTree, _Data} = Node) when is_map(SubTree)-> export([], Node);
 export(Index) ->
