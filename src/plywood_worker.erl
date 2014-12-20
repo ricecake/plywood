@@ -69,18 +69,15 @@ handle_call({delete, Index, Data}, _From, State) ->
         ok = plywood:delete(Index, jiffy:decode(Data, [return_maps])),
         {stop, normal, ok, State};
 handle_call({lookup, Index, Path}, _From, State) ->
-	Response = try plywood:lookup(Index, Path) of
-		Result ->
-			Data = plywood:export(
-				lists:reverse(Path),
-				Result
-			),
-			JSON = jiffy:encode(Data),
-			{ok, JSON}
-	catch
-		_Exception:_Reason -> {false, <<"Error">>}
-	end,
-	{reply, Response, State};
+        Return = try plywood:export(
+                lists:reverse(Path),
+                plywood:lookup(Index, Path)
+        ) of
+                Data -> {ok, jiffy:encode(Data)}
+        catch
+                Error -> Error
+        end,
+	{stop, normal, Return, State};
 handle_call(_Request, _From, State) ->
         {reply, ok, State}.
 handle_cast(_Msg, State) ->
@@ -90,6 +87,8 @@ handle_info(_Info, State) ->
         {noreply, State}.
 
 terminate(_Reason, _State) ->
+        erlang:garbage_collect(),
+        erlang:garbage_collect(whereis(primary_tree), [{async, 0}]),
         ok.
 
 code_change(_OldVsn, State, _Extra) ->

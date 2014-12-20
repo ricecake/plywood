@@ -32,21 +32,13 @@ process(_, _, Req) ->
 
 lookup(Index, Path, Req) ->
 	case plywood_worker:lookup(Index, Path) of
-		{ok, JSON}     ->
-			cowboy_req:reply(
-				200,
-				[{
-					<<"content-type">>,
-					<<"text/json; charset=utf-8">>
-				}],
-				JSON,
-				Req
-			);
-		{false, Error} ->
-			cowboy_req:reply(500, [], Error, Req);
-		_              ->
-			cowboy_req:reply(500, [], <<"Error">>, Req)
-	end.
+                {ok, JSON} ->
+                        cowboy_req:reply(200, [
+                                        {<<"content-type">>, <<"text/json; charset=utf-8">>}
+                                ], JSON, Req);
+                {not_found, Index} -> cowboy_req:reply(404, [], <<"Not Found">>, Req);
+                _Error -> cowboy_req:reply(418, [], <<"Error">>, Req)
+        end.
 
 insert(Index, Data, Req) ->
         ok = plywood_worker:add(Index, Data),
