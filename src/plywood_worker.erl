@@ -6,7 +6,10 @@
 %% API Function Exports
 %% ------------------------------------------------------------------
 
--export([start_link/0, add/2, add/3, add/4, delete/2, delete/3, delete/4]).
+-export([start_link/0]).
+-export([add/2, add/3, add/4]).
+-export([delete/2, delete/3, delete/4]).
+-export([lookup/3, lookup/4, lookup/5]).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -42,6 +45,17 @@ delete(Pid, Index, Data) ->
 delete(Pid, Index, Data, Timeout) ->
         gen_server:call(Pid, {delete, Index, Data}, Timeout).
 
+lookup(Index, Path, Req) ->
+	{ok, Pid} = plywood_work_sup:getWorker(),
+	lookup(Pid, Index, Path, Req).
+
+lookup(Pid, Index, Path, Req) ->
+	lookup(Pid, Index, Path, Req, infinity).
+
+lookup(Pid, Index, Path, Req, Timeout) ->
+	gen_server:call(Pid, {lookup, Index, Path, Req}, Timeout).
+
+
 %% ------------------------------------------------------------------
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
@@ -55,9 +69,35 @@ handle_call({add, Index, Data}, _From, State) ->
 handle_call({delete, Index, Data}, _From, State) ->
         ok = plywood:delete(Index, jiffy:decode(Data, [return_maps])),
         {stop, normal, ok, State};
+handle_call({lookup, Index, Path, Req}, _From, State) ->
+	try plywood:lookup(Index, Path) of
+		Data ->
+			Result = plywood:export(
+				lists:reverse(Path),
+				Data
+			),
+			cowboy_req:reply(
+				200,
+				[
+					{
+						<<"content-type">>,
+						<<"text/json; charset=utf-8">>
+					}
+				],
+				jiffy:encode(Result),
+				Req
+			)
+	catch
+		_Exception:_Reason -> cowboy_req:reply(
+			500,
+			[],
+			<<"Error">>,
+			Req
+		)
+	end,
+	{stop, normal, ok, State};
 handle_call(_Request, _From, State) ->
         {reply, ok, State}.
-
 handle_cast(_Msg, State) ->
         {noreply, State}.
 
