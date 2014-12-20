@@ -117,9 +117,9 @@ prepExport(Name, Path, {SubTree, Data}) ->
 		children => [ prepExport(Key, [Name |Path], Value) || {Key, Value} <-maps:to_list(SubTree)]
 	}.
 
-preorderDFS(Operator, {SubTree, Data}, Path) when is_function(Operator), is_map(SubTree), is_list(Data), is_list(Path) ->
+traverse(Operator, {SubTree, Data}, Path) when is_function(Operator), is_map(SubTree), is_list(Data), is_list(Path) ->
 	[ Operator(Datum, Path) || Datum <- Data],
-	[ ok = preorderDFS(Operator, Value, [Name | Path]) || {Name, Value} <- maps:to_list(SubTree)],
+	[ ok = traverse(Operator, Value, [Name | Path]) || {Name, Value} <- maps:to_list(SubTree)],
 	ok.
 
 accumulate(Operator, Acc, {SubTree, Data}, Path) when is_function(Operator), is_map(SubTree), is_list(Data), is_list(Path) ->
