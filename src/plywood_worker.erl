@@ -53,7 +53,29 @@ lookup(Pid, Index, Path, Req) ->
 	lookup(Pid, Index, Path, Req, infinity).
 
 lookup(Pid, Index, Path, Req, Timeout) ->
-	gen_server:call(Pid, {lookup, Index, Path, Req}, Timeout).
+	case gen_server:call(Pid, {lookup, Index, Path}, Timeout) of
+		{ok, Data} ->	
+			Result = plywood:export(
+				lists:reverse(Path),
+				Data
+			),
+			cowboy_req:reply(
+				200,
+				[{
+					<<"content-type">>,
+					<<"text/json; charset=utf-8">>
+				}],
+				jiffy:encode(Result),
+				Req
+			);
+		{false, Error} ->
+			cowboy_req:reply(
+				500,
+				[],
+				Error,
+				Req
+			)
+	end.
 
 
 %% ------------------------------------------------------------------
@@ -69,33 +91,13 @@ handle_call({add, Index, Data}, _From, State) ->
 handle_call({delete, Index, Data}, _From, State) ->
         ok = plywood:delete(Index, jiffy:decode(Data, [return_maps])),
         {stop, normal, ok, State};
-handle_call({lookup, Index, Path, Req}, _From, State) ->
-	try plywood:lookup(Index, Path) of
-		Data ->
-			Result = plywood:export(
-				lists:reverse(Path),
-				Data
-			),
-			cowboy_req:reply(
-				200,
-				[
-					{
-						<<"content-type">>,
-						<<"text/json; charset=utf-8">>
-					}
-				],
-				jiffy:encode(Result),
-				Req
-			)
+handle_call({lookup, Index, Path}, _From, State) ->
+	Response = try plywood:lookup(Index, Path) of
+		Data               -> {ok, Data}
 	catch
-		_Exception:_Reason -> cowboy_req:reply(
-			500,
-			[],
-			<<"Error">>,
-			Req
-		)
+		_Exception:_Reason -> {false, <<"Error">>}
 	end,
-	{stop, normal, ok, State};
+	{reply, Response, State};
 handle_call(_Request, _From, State) ->
         {reply, ok, State}.
 handle_cast(_Msg, State) ->
