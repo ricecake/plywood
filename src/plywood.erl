@@ -133,3 +133,10 @@ filter(Operator, {SubTree, Data}, Path) when is_function(Operator), is_map(SubTr
 map(Operator, {SubTree, Data}, Path) when is_function(Operator), is_map(SubTree), is_list(Data), is_list(Path) ->
 	NewData = [ Operator(Datum, Path) || Datum <- Data],
 	{maps:map(fun(Name, Value) -> map(Operator, Value, [Name | Path]) end, SubTree), NewData}.
+
+transform(Operator, {SubTree, Data} = Node, Path) when is_function(Operator), is_map(SubTree), is_list(Data), is_list(Path) ->
+        case Operator(Node, Path) of
+                {continue, {NewSubTree, NewData}} ->
+                        {maps:map(fun(Name, Value) -> transform(Operator, Value, [Name | Path]) end, NewSubTree), NewData};
+                {done, NewNode} -> NewNode
+        end.
