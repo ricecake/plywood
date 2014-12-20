@@ -31,16 +31,29 @@ process(_, _, Req) ->
 	cowboy_req:reply(405, Req).
 
 lookup(Index, Path, Req) ->
-
-        try plywood:lookup(Index, Path) of
-                Data ->
-                        Result = plywood:export(lists:reverse(Path), Data),
-                        cowboy_req:reply(200, [
-%					{<<"content-type">>, <<"text/json; charset=utf-8">>}
-				], jiffy:encode(Result), Req)
-        catch
-                _Exception:_Reason -> cowboy_req:reply(500, [], <<"Error">>, Req)
-        end.
+	case plywood_worker:lookup(Index, Path) of
+		{ok, Data} ->
+			Result = plywood:export(
+				lists:reverse(Path),
+				Data
+			),
+			cowboy_req:reply(
+				200,
+				[{
+					<<"content-type">>,
+					<<"text/json; charset=utf-8">>
+				}],
+				jiffy:encode(Result),
+				Req
+			);
+		{false, Error} ->
+			cowboy_req:reply(
+				500,
+				[],
+				Error,
+				Req
+			)
+	end.
 
 insert(Index, Data, Req) ->
         ok = plywood_worker:add(Index, Data),
