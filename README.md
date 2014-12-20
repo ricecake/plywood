@@ -50,10 +50,14 @@ Building on Linux
 git clone https://github.com/ricecake/plywood.git
 cd plywood
 ./rebar get-deps co
-erl -pa ../plywood/ebin/ -pa ../plywood/deps/*/ebin
+scripts/start_plywood.sh
 ```
 
-You should now be inside the Erlang shell
+If you have gnu screen it will have tried to start
+a screen named "plywood", if not you will now be in
+an erlang shell now (as the software develops you will
+just be able to start the server as a regular daemon,
+no more screen or shell to have it running).
 
 ```
 application:ensure_all_started(plywood).

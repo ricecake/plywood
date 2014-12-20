@@ -31,15 +31,13 @@ process(_, _, Req) ->
 	cowboy_req:reply(405, Req).
 
 lookup(Index, Path, Req) ->
-
-        try plywood:lookup(Index, Path) of
-                Data ->
-                        Result = plywood:export(lists:reverse(Path), Data),
+	case plywood_worker:lookup(Index, Path) of
+                {ok, JSON} ->
                         cowboy_req:reply(200, [
-%					{<<"content-type">>, <<"text/json; charset=utf-8">>}
-				], jiffy:encode(Result), Req)
-        catch
-                _Exception:_Reason -> cowboy_req:reply(500, [], <<"Error">>, Req)
+                                        {<<"content-type">>, <<"text/json; charset=utf-8">>}
+                                ], JSON, Req);
+                {not_found, Index} -> cowboy_req:reply(404, [], <<"Not Found">>, Req);
+                _Error -> cowboy_req:reply(418, [], <<"Error">>, Req)
         end.
 
 insert(Index, Data, Req) ->
