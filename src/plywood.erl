@@ -129,3 +129,7 @@ accumulate(Operator, Acc, {SubTree, Data}, Path) when is_function(Operator), is_
 filter(Operator, {SubTree, Data}, Path) when is_function(Operator), is_map(SubTree), is_list(Data), is_list(Path) ->
 	NewData = [ Datum || Datum <- Data, Operator(Datum, Path)],
 	{compactNode(maps:map(fun(Name, Value) -> filter(Operator, Value, [Name | Path]) end, SubTree)), NewData}.
+
+map(Operator, {SubTree, Data}, Path) when is_function(Operator), is_map(SubTree), is_list(Data), is_list(Path) ->
+	NewData = [ Operator(Datum, Path) || Datum <- Data],
+	{maps:map(fun(Name, Value) -> map(Operator, Value, [Name | Path]) end, SubTree), NewData}.
