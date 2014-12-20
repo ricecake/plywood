@@ -121,3 +121,7 @@ preorderDFS(Operator, {SubTree, Data}, Path) when is_function(Operator), is_map(
 	[ Operator(Datum, Path) || Datum <- Data],
 	[ ok = preorderDFS(Operator, Value, [Name | Path]) || {Name, Value} <- maps:to_list(SubTree)],
 	ok.
+
+accumulate(Operator, Acc, {SubTree, Data}, Path) when is_function(Operator), is_map(SubTree), is_list(Data), is_list(Path) ->
+	AccLevel = lists:foldl(fun(Datum, AccIn) -> Operator(Datum, AccIn, Path) end, Acc, Data),
+	lists:foldl(fun({Name, Value}, AccSub)-> accumulate(Operator, AccSub, Value, [Name | Path]) end, AccLevel, maps:to_list(SubTree)).
