@@ -70,7 +70,13 @@ handle_call({delete, Index, Data}, _From, State) ->
         {stop, normal, ok, State};
 handle_call({lookup, Index, Path}, _From, State) ->
 	Response = try plywood:lookup(Index, Path) of
-		Data               -> {ok, Data}
+		Result ->
+			Data = plywood:export(
+				lists:reverse(Path),
+				Result
+			),
+			JSON = jiffy:encode(Data),
+			{ok, JSON}
 	catch
 		_Exception:_Reason -> {false, <<"Error">>}
 	end,

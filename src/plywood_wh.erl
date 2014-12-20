@@ -32,27 +32,20 @@ process(_, _, Req) ->
 
 lookup(Index, Path, Req) ->
 	case plywood_worker:lookup(Index, Path) of
-		{ok, Data} ->
-			Result = plywood:export(
-				lists:reverse(Path),
-				Data
-			),
+		{ok, JSON}     ->
 			cowboy_req:reply(
 				200,
 				[{
 					<<"content-type">>,
 					<<"text/json; charset=utf-8">>
 				}],
-				jiffy:encode(Result),
+				JSON,
 				Req
 			);
 		{false, Error} ->
-			cowboy_req:reply(
-				500,
-				[],
-				Error,
-				Req
-			)
+			cowboy_req:reply(500, [], Error, Req);
+		_              ->
+			cowboy_req:reply(500, [], <<"Error">>, Req)
 	end.
 
 insert(Index, Data, Req) ->
