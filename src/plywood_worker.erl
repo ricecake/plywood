@@ -54,7 +54,7 @@ lookup(Pid, Index, Path, Req) ->
 
 lookup(Pid, Index, Path, Req, Timeout) ->
 	case gen_server:call(Pid, {lookup, Index, Path}, Timeout) of
-		{ok, Data} ->	
+		{ok, Data} ->
 			Result = plywood:export(
 				lists:reverse(Path),
 				Data
