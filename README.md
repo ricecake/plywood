@@ -1,4 +1,4 @@
-Windex
+Plywood
 ======
 
 Hierarchical data storage and retrieval
@@ -12,7 +12,7 @@ instructions below are bound to change drastically
 Overview
 ========
 
-Windex provides a simple web interface to store JSON
+Plywood provides a simple web interface to store JSON
 objects that are in a tree format and then search on
 and retrieve information from that structure with
 simple HTTP Restful semantics.
@@ -28,10 +28,15 @@ Setting up and building
 =======================
 
   git clone https://github.com/ricecake/plywood.git
+
   cd plywood
+
   ./rebar get-deps co
-  erl -pa ebin/ -pa deps/*/ebin
-    #you will now be in the erlang shell
+
+  erl -pa ../plywood/ebin/ -pa ../plywood/deps/*/ebin
+
+  #you will now be in the erlang shell
+
   application:ensure_all_started(plywood).
 
 Basic Usage
