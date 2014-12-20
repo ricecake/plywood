@@ -125,3 +125,7 @@ preorderDFS(Operator, {SubTree, Data}, Path) when is_function(Operator), is_map(
 accumulate(Operator, Acc, {SubTree, Data}, Path) when is_function(Operator), is_map(SubTree), is_list(Data), is_list(Path) ->
 	AccLevel = lists:foldl(fun(Datum, AccIn) -> Operator(Datum, AccIn, Path) end, Acc, Data),
 	lists:foldl(fun({Name, Value}, AccSub)-> accumulate(Operator, AccSub, Value, [Name | Path]) end, AccLevel, maps:to_list(SubTree)).
+
+filter(Operator, {SubTree, Data}, Path) when is_function(Operator), is_map(SubTree), is_list(Data), is_list(Path) ->
+	NewData = [ Datum || Datum <- Data, Operator(Datum, Path)],
+	{compactNode(maps:map(fun(Name, Value) -> filter(Operator, Value, [Name | Path]) end, SubTree)), NewData}.
