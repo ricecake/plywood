@@ -8,6 +8,7 @@
 
 %% Processing exports
 -export([export/1, export/2, truncate/2]).
+-export([processTree/2]).
 
 -compile(export_all).
 %% ------------------------------------------------------------------
@@ -52,6 +53,8 @@ export([Name |Rest], {SubTree, _Data} = Node) when is_map(SubTree)-> prepExport(
 export(Path, Index) ->
         {ok, RootNode} = plywood_db:fetch(primary_tree, Index),
         export(Path, RootNode).
+
+processTree(Tree, Opts)-> ok.
 
 %% ------------------------------------------------------------------
 %% Internal Function Definitions
@@ -150,3 +153,6 @@ transform(Operator, {SubTree, Data} = Node, Path) when is_function(Operator), is
                         {maps:map(fun(Name, Value) -> transform(Operator, Value, [Name | Path]) end, NewSubTree), NewData};
                 {done, NewNode} -> NewNode
         end.
+
+proccesOpPriority() -> [truncate].
+
