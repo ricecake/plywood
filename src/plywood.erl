@@ -154,5 +154,24 @@ transform(Operator, {SubTree, Data} = Node, Path) when is_function(Operator), is
                 {done, NewNode} -> NewNode
         end.
 
-proccesOpPriority() -> [truncate].
+proccesOpPriority() -> [aggregate, filter, truncate].
 
+getOperator(aggregate, {Field, max}) -> fun(Tree) -> Tree end;
+getOperator(aggregate, {Field, min}) -> fun(Tree) -> Tree end;
+getOperator(filter, {Field, '>', Value}) -> fun(Tree) -> Tree end;
+getOperator(filter, {Field, '<', Value}) -> fun(Tree) -> Tree end;
+getOperator(filter, {Field, '>=', Value}) -> fun(Tree) -> Tree end;
+getOperator(filter, {Field, '<=', Value}) -> fun(Tree) -> Tree end;
+getOperator(filter, {Field, '=', Value}) -> fun(Tree) -> Tree end;
+getOperator(filter, {Field, '!=', Value}) -> fun(Tree) -> Tree end;
+getOperator(filter, {Field, '=~', Value}) -> fun(Tree) -> Tree end;
+getOperator(filter, {Field, '!~', Value}) -> fun(Tree) -> Tree end;
+getOperator(truncate, Depth) -> fun(Tree) -> Tree end;
+        fun(Tree) -> truncate(Tree, Depth) end.
+
+buildOpList(Ops) when is_map(Ops) -> ok.
+
+applyTransforms(Tree, []) -> Tree;
+applyTransforms(Tree, [Op | Rest]) ->
+        NewTree = Op(Tree),
+        applyTransforms(NewTree, Rest).
