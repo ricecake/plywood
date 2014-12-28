@@ -8,7 +8,7 @@
 
 %% Processing exports
 -export([export/1, export/2, truncate/2]).
--export([processTree/2]).
+-export([processTree/2, processOps/0]).
 
 -compile(export_all).
 %% ------------------------------------------------------------------
@@ -54,8 +54,10 @@ export(Path, Index) ->
         {ok, RootNode} = plywood_db:fetch(primary_tree, Index),
         export(Path, RootNode).
 
+processOps() -> [aggregate, filter, truncate].
+
 processTree(Tree, Opts) when is_map(Opts) ->
-        OpList = buildOpList(undefined, [], Opts, proccesOpPriority(), []),
+        OpList = buildOpList(undefined, [], Opts, processOps(), []),
         applyTransforms(Tree, OpList).
 
 %% ------------------------------------------------------------------
@@ -156,8 +158,6 @@ transform(Operator, {SubTree, Data} = Node, Path) when is_function(Operator), is
                 {done, NewNode} -> NewNode
         end.
 
-proccesOpPriority() -> [aggregate, filter, truncate].
-
 getOperator(aggregate, {Field, max}) -> fun(Tree) -> Tree end;
 getOperator(aggregate, {Field, min}) -> fun(Tree) -> Tree end;
 getOperator(filter, {Field, '>', Value}) -> fun(Tree) -> Tree end;
@@ -168,8 +168,9 @@ getOperator(filter, {Field, '=', Value}) -> fun(Tree) -> Tree end;
 getOperator(filter, {Field, '!=', Value}) -> fun(Tree) -> Tree end;
 getOperator(filter, {Field, '=~', Value}) -> fun(Tree) -> Tree end;
 getOperator(filter, {Field, '!~', Value}) -> fun(Tree) -> Tree end;
-getOperator(truncate, Depth) ->
-        fun(Tree) -> truncate(Tree, Depth) end.
+getOperator(truncate, Depth) when is_integer(Depth) ->
+        fun(Tree) -> truncate(Tree, Depth) end;
+getOperator(_, _) -> fun(Tree) -> Tree end.
 
 buildOpList(Token, [Op | Rest], OpsMap, Seq, List) ->
         Func = getOperator(Token, Op),

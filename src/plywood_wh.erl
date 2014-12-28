@@ -12,8 +12,14 @@ init(Req, Opts) ->
 
 process(<<"GET">>, _Body, Req) ->
 	Index = cowboy_req:binding(index, Req),
+        Opts = cowboy_req:match_qs([{truncate, int, 1}], Req),
 	Path = cowboy_req:path_info(Req),
-	lookup(Index, Path, Req);
+	lookup(Index, Path, Opts, Req);
+process(<<"POST">>, _Body, Req) ->
+	Index = cowboy_req:binding(index, Req),
+        {ok, Opts, Req2} = cowboy_req:body(Req, [{length, 1000000}]),
+	Path = cowboy_req:path_info(Req2),
+	lookup(Index, Path, jiffy:decode(Opts, [return_maps]), Req2);
 process(<<"PUT">>, true, Req) ->
 	Index = cowboy_req:binding(index, Req),
 	{ok, Data, Req2} = cowboy_req:body(Req, [{length, 100000000}]),
@@ -30,8 +36,10 @@ process(_, _, Req) ->
 	%% Method not allowed.
 	cowboy_req:reply(405, Req).
 
-lookup(Index, Path, Req) ->
-	case plywood_worker:lookup(Index, Path) of
+lookup(Index, Path, Opts, Req) ->
+        NewOpts = cleanOptions(maps:to_list(Opts), #{}),
+        io:format("~p~n", [NewOpts]),
+	case plywood_worker:lookup(Index, Path, NewOpts) of
                 {ok, JSON} ->
                         cowboy_req:reply(200, [
                                         {<<"content-type">>, <<"text/json; charset=utf-8">>}
@@ -47,3 +55,29 @@ insert(Index, Data, Req) ->
 remove(Index, Data, Req) ->
 	ok = plywood_worker:delete(Index, Data),
 	cowboy_req:reply(200, Req).
+
+cleanOptions([], Accum) -> Accum;
+cleanOptions([{Class, Value} | Rest], Accum) when is_list(Value) ->
+        NewValues = [ cleanField(Class, SubValue) || SubValue <- Value],
+        NewAcc = lists:foldl(fun({Key, Val}, Acc) -> appendMap(Key, Val, Acc) end, Accum, NewValues),
+        cleanOptions(Rest, NewAcc);
+cleanOptions([{Class, Value} | Rest], Accum) ->
+        {NewKey, NewVal} = cleanField(Class, Value),
+        cleanOptions(Rest, appendMap(NewKey, NewVal, Accum)).
+
+
+cleanField(<<"truncate">>, Depth) when is_integer(Depth) ->
+        {truncate, Depth};
+cleanField(<<"filter">>, #{ <<"field">> := Field, <<"op">> := Op, <<"value">> := Val }) ->
+        {filter, {Field, binary_to_existing_atom(Op, utf8), Val}};
+cleanField(Field, Value) -> {Field, Value}.
+
+appendMap(Key, Value, Map) ->
+        case maps:find(Key, Map) of
+                {ok, MapValue} when is_list(MapValue) ->
+                                maps:put(Key, [Value | MapValue], Map);
+                {ok, MapValue} ->
+                                maps:put(Key, [Value, MapValue], Map);
+                error ->
+                                maps:put(Key, Value, Map)
+        end.

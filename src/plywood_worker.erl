@@ -9,7 +9,7 @@
 -export([start_link/0]).
 -export([add/2, add/3, add/4]).
 -export([delete/2, delete/3, delete/4]).
--export([lookup/2, lookup/3, lookup/4]).
+-export([lookup/3, lookup/4, lookup/5]).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -45,15 +45,15 @@ delete(Pid, Index, Data) ->
 delete(Pid, Index, Data, Timeout) ->
         gen_server:call(Pid, {delete, Index, Data}, Timeout).
 
-lookup(Index, Path) ->
+lookup(Index, Path, Opts) ->
 	{ok, Pid} = plywood_work_sup:getWorker(),
-	lookup(Pid, Index, Path).
+	lookup(Pid, Index, Path, Opts).
 
-lookup(Pid, Index, Path) ->
-	lookup(Pid, Index, Path, infinity).
+lookup(Pid, Index, Path, Opts) ->
+	lookup(Pid, Index, Path, Opts, infinity).
 
-lookup(Pid, Index, Path, Timeout) ->
-	gen_server:call(Pid, {lookup, Index, Path}, Timeout).
+lookup(Pid, Index, Path, Opts, Timeout) ->
+	gen_server:call(Pid, {lookup, Index, Path, Opts}, Timeout).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Definitions
@@ -68,10 +68,10 @@ handle_call({add, Index, Data}, _From, State) ->
 handle_call({delete, Index, Data}, _From, State) ->
         ok = plywood:delete(Index, jiffy:decode(Data, [return_maps])),
         {stop, normal, ok, State};
-handle_call({lookup, Index, Path}, _From, State) ->
+handle_call({lookup, Index, Path, Opts}, _From, State) ->
         Return = try plywood:export(
                 lists:reverse(Path),
-                plywood:lookup(Index, Path)
+                plywood:processTree(plywood:lookup(Index, Path), Opts)
         ) of
                 Data -> {ok, jiffy:encode(Data)}
         catch
