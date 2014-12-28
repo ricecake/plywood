@@ -54,7 +54,7 @@ export(Path, Index) ->
         {ok, RootNode} = plywood_db:fetch(primary_tree, Index),
         export(Path, RootNode).
 
-processTree(Tree, Opts)-> ok.
+processTree(Tree, Opts) when is_map(Opts) -> ok.
 
 %% ------------------------------------------------------------------
 %% Internal Function Definitions
@@ -166,10 +166,20 @@ getOperator(filter, {Field, '=', Value}) -> fun(Tree) -> Tree end;
 getOperator(filter, {Field, '!=', Value}) -> fun(Tree) -> Tree end;
 getOperator(filter, {Field, '=~', Value}) -> fun(Tree) -> Tree end;
 getOperator(filter, {Field, '!~', Value}) -> fun(Tree) -> Tree end;
-getOperator(truncate, Depth) -> fun(Tree) -> Tree end;
+getOperator(truncate, Depth) ->
         fun(Tree) -> truncate(Tree, Depth) end.
 
-buildOpList(Ops) when is_map(Ops) -> ok.
+buildOpList(Token, [Op | Rest], OpsMap, Seq, List) ->
+        Func = getOperator(Token, Op),
+        buildOpList(Token, Rest, OpsMap, Seq, [Func | List]);
+buildOpList(_Previous, [], OpsMap, [Class | Rest], List) ->
+        io:format("~p~n", [{Class, OpsMap}]),
+        case maps:find(Class, OpsMap) of
+                error -> buildOpList(Class, [], maps:remove(Class, OpsMap), Rest, List);
+                {ok, Items} when is_list(Items) -> buildOpList(Class, Items, maps:remove(Class, OpsMap), Rest, List);
+                {ok, Item}  -> buildOpList(Class, [Item], maps:remove(Class, OpsMap), Rest, List)
+        end;
+buildOpList(_Last, [], #{}, _Seq, List) -> List.
 
 applyTransforms(Tree, []) -> Tree;
 applyTransforms(Tree, [Op | Rest]) ->
