@@ -60,8 +60,11 @@ var svg = d3.select("body").append("svg")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 d3.json("/tree/{{ index }}").send('POST', JSON.stringify({
-    truncate: 1,
-    filter: { field: 'size', op: '>', value: 3}
+//    truncate: 2,
+    filter: [
+	      { field: 'size', op: '>', value: 3},
+	      { field: 'path', op: 'ilike', value: 'git' }
+	    ]
   }), function(error, flare) {
   flare.x0 = 0;
   flare.y0 = 0;

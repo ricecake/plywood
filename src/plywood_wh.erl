@@ -38,7 +38,6 @@ process(_, _, Req) ->
 
 lookup(Index, Path, Opts, Req) ->
         NewOpts = cleanOptions(maps:to_list(Opts), #{}),
-        io:format("~p~n", [NewOpts]),
 	case plywood_worker:lookup(Index, Path, NewOpts) of
                 {ok, JSON} ->
                         cowboy_req:reply(200, [

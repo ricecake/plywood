@@ -160,14 +160,30 @@ transform(Operator, {SubTree, Data} = Node, Path) when is_function(Operator), is
 
 getOperator(aggregate, {Field, max}) -> fun(Tree) -> Tree end;
 getOperator(aggregate, {Field, min}) -> fun(Tree) -> Tree end;
-getOperator(filter, {Field, '>', Value}) -> fun(Tree) -> Tree end;
-getOperator(filter, {Field, '<', Value}) -> fun(Tree) -> Tree end;
-getOperator(filter, {Field, '>=', Value}) -> fun(Tree) -> Tree end;
-getOperator(filter, {Field, '<=', Value}) -> fun(Tree) -> Tree end;
-getOperator(filter, {Field, '=', Value}) -> fun(Tree) -> Tree end;
-getOperator(filter, {Field, '!=', Value}) -> fun(Tree) -> Tree end;
-getOperator(filter, {Field, '=~', Value}) -> fun(Tree) -> Tree end;
-getOperator(filter, {Field, '!~', Value}) -> fun(Tree) -> Tree end;
+getOperator(filter, {Field, '>', Value}) ->
+        buildFilterFun(fun(A) -> A > Value end, Field);
+getOperator(filter, {Field, '<', Value}) ->
+        buildFilterFun(fun(A) -> A < Value end, Field);
+getOperator(filter, {Field, '>=', Value}) ->
+        buildFilterFun(fun(A) -> A >= Value end, Field);
+getOperator(filter, {Field, '=<', Value}) ->
+        buildFilterFun(fun(A) -> A =< Value end, Field);
+getOperator(filter, {Field, '=', Value}) ->
+        buildFilterFun(fun(A) -> A == Value end, Field);
+getOperator(filter, {Field, '!=', Value}) ->
+        buildFilterFun(fun(A) -> A /= Value end, Field);
+getOperator(filter, {Field, 'like', Value}) ->
+        Regexp = buildRegexFun(Value, false, []),
+        buildFilterFun(Regexp, Field);
+getOperator(filter, {Field, 'ilike', Value}) ->
+        Regexp = buildRegexFun(Value, false, [caseless]),
+        buildFilterFun(Regexp, Field);
+getOperator(filter, {Field, 'unlike', Value}) ->
+        Regexp = buildRegexFun(Value, true, []),
+        buildFilterFun(Regexp, Field);
+getOperator(filter, {Field, 'unilike', Value}) ->
+        Regexp = buildRegexFun(Value, true, [caseless]),
+        buildFilterFun(Regexp, Field);
 getOperator(truncate, Depth) when is_integer(Depth) ->
         fun(Tree) -> truncate(Tree, Depth) end;
 getOperator(_, _) -> fun(Tree) -> Tree end.
@@ -176,7 +192,6 @@ buildOpList(Token, [Op | Rest], OpsMap, Seq, List) ->
         Func = getOperator(Token, Op),
         buildOpList(Token, Rest, OpsMap, Seq, [Func | List]);
 buildOpList(_Previous, [], OpsMap, [Class | Rest], List) ->
-        io:format("~p~n", [{Class, OpsMap}]),
         case maps:find(Class, OpsMap) of
                 error -> buildOpList(Class, [], maps:remove(Class, OpsMap), Rest, List);
                 {ok, Items} when is_list(Items) -> buildOpList(Class, Items, maps:remove(Class, OpsMap), Rest, List);
@@ -188,3 +203,30 @@ applyTransforms(Tree, []) -> Tree;
 applyTransforms(Tree, [Op | Rest]) ->
         NewTree = Op(Tree),
         applyTransforms(NewTree, Rest).
+
+buildFilterFun(Op, <<"name">>) -> 
+        fun(Tree) ->
+                filter(fun(_Data, [Name |_Path]) -> Op(Name) end, Tree, [])
+        end;
+buildFilterFun(Op, <<"path">>) -> 
+        fun(Tree) ->
+                filter(fun(_Data, Path) ->
+                        Op(makeNodeID(lists:reverse(Path), <<"/">>))
+                end, Tree, [])
+        end;
+buildFilterFun(Op, Field) ->
+        fun(Tree) ->
+                filter(fun(Data, _Path) when is_map(Data) ->
+                        case maps:find(Field, Data) of
+                                {ok, DataValue} -> Op(DataValue);
+                                _ -> false
+                        end;
+                        (_Data, _Path) -> false
+                end, Tree, [])
+        end.
+
+buildRegexFun(Pattern, Invert, Opts) ->
+        {ok, Regexp} = re:compile(Pattern, Opts),
+        fun(DataValue) ->
+                (match == re:run(DataValue, Regexp, [{capture, none}])) xor Invert
+        end.
