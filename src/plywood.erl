@@ -54,7 +54,9 @@ export(Path, Index) ->
         {ok, RootNode} = plywood_db:fetch(primary_tree, Index),
         export(Path, RootNode).
 
-processTree(Tree, Opts) when is_map(Opts) -> ok.
+processTree(Tree, Opts) when is_map(Opts) ->
+        OpList = buildOpList(undefined, [], Opts, proccesOpPriority(), []),
+        applyTransforms(Tree, OpList).
 
 %% ------------------------------------------------------------------
 %% Internal Function Definitions
