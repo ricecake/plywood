@@ -25,15 +25,10 @@ lookup(Index, KeyParts) when is_list(KeyParts) ->
         doLookup(KeyParts, RootNode).
 
 add(Index, Rev) when is_map(Rev) ->
-        RevTree = makeTree(Rev),
-        NewTree = case plywood_db:getIfExists(primary_tree, Index) of
-                false -> RevTree;
-                {ok, FullTree} -> mergeTrees(FullTree, RevTree)
-        end,
-        plywood_db:store(primary_tree, Index, NewTree).
+        makeTree(Index, Rev, fun mergeStore/2).
 
 delete(Index, Rev) when is_map(Rev) ->
-        RevTree = makeTree(Rev),
+        RevTree = makeTree(Index, Rev, fun demergeTrees/2),
         {ok, FullTree} = plywood_db:fetch(primary_tree, Index),
         plywood_db:store(primary_tree, Index, demergeTrees(FullTree, RevTree)).
 
@@ -70,25 +65,57 @@ doLookup([Label | Rest], {Node, _Data}) when is_map(Node) ->
         NewNode = maps:get(Label, Node),
         doLookup(Rest, NewNode).
 
-convertNode(Value) when is_map(Value) -> {doMakeTree(Value), []};
-convertNode(Value) when is_list(Value) -> {#{}, lists:usort(Value)}.
+makeTree(Index, Revision, Op) when is_map(Revision) -> doMakeTree(Index, [{maps:to_list(Revision), []}], Op).
 
-makeTree(Revision) when is_map(Revision) -> {doMakeTree(Revision), []}.
-doMakeTree(Revision) when is_map(Revision) ->
-        compactNode(maps:map(fun(_Key, Value) -> convertNode(Value) end, Revision)).
+doMakeTree(_, [], _) -> ok;
+doMakeTree(Index, [{[], _Path} | Rest], Op) -> doMakeTree(Index, Rest, Op);
+doMakeTree(Index, [{[{Name, SubTree} | RestLevel], Path} | Rest], Op) when is_map(SubTree) ->
+        Loc = [Name |Path],
+        Children = maps:to_list(SubTree),
+        NewLevel = {Children, Loc},
+        Node = #{
+		id   => makeNodeID(lists:reverse(Loc), <<"/">>),
+		name => Name,
+		children => lists:usort([
+                        {Index, makeNodeID(lists:reverse([ChildName |Loc]), <<"/">>)}
+                                || {ChildName, _ } <- Children
+                ]),
+                hasChildren => true,
+                hasData => false
+        },
+        ok = Op(Index, Node),
+        doMakeTree(Index, [NewLevel, {RestLevel, Path} | Rest], Op);
+doMakeTree(Index, [{[{Name, Data} | RestLevel], Path} | Rest], Op) when is_list(Data) ->
+        Loc = [Name |Path],
+        Node = #{
+		id   => makeNodeID(lists:reverse(Loc), <<"/">>),
+		name => Name,
+		data => lists:usort(Data),
+                hasChildren => false,
+                hasData => true
+        },
+        ok = Op(Index, Node),
+        doMakeTree(Index, [{RestLevel, Path} | Rest], Op).
 
-mergeTrees({LsubTree, Ldata}, {RsubTree, Rdata}) ->
-        NewData = lists:umerge(Ldata, Rdata),
-        {hashMerge(LsubTree, RsubTree), NewData}.
-
-hashMerge(Left, Right) when is_map(Left), is_map(Right) -> hashMerge(Left, maps:to_list(Right));
-hashMerge(Left, [])    when is_map(Left) -> Left;
-hashMerge(Left, [{Key, Value} |Rest]) when is_map(Left) ->
-        NewValue = case maps:find(Key, Left) of
-                error -> Value;
-                {ok, LeftValue} -> mergeTrees(LeftValue, Value)
+mergeStore(Index, #{id := Id} = Data) ->
+        Key = {Index, Id},
+        NewNode = case plywood_db:getIfExists(primary_tree, Key) of
+                false -> Data;
+                {ok, OldNode} -> mergeNodes(OldNode, maps:to_list(Data))
         end,
-        hashMerge(maps:put(Key, NewValue, Left), Rest).
+        plywood_db:store(primary_tree, Key, NewNode).
+
+mergeNodes(Left, []) -> Left;
+mergeNodes(Left, [{id,   _} |Right]) -> mergeNodes(Left, Right);
+mergeNodes(Left, [{name, _} |Right]) -> mergeNodes(Left, Right);
+mergeNodes(#{data := Old} =Left, [{data, New} |Right]) ->
+        mergeNodes(maps:put(data, lists:umerge(Old, New), Left), Right);
+mergeNodes(#{children := Old} =Left, [{children, New} |Right]) ->
+        mergeNodes(maps:put(children, lists:umerge(Old, New), Left), Right);
+mergeNodes(#{hasChildren := Old} =Left, [{hasChildren, New} |Right]) ->
+        mergeNodes(maps:put(hasChildren, (Old or New), Left), Right);
+mergeNodes(#{hasData := Old} =Left, [{hasData, New} |Right]) ->
+        mergeNodes(maps:put(hasData, (Old or New), Left), Right).
 
 compactNode(Node) when is_map(Node) ->
         maps:from_list([ {K, V} || {K, V} <- maps:to_list(Node), V =/= {#{}, []}]).
