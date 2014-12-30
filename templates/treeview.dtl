@@ -36,20 +36,22 @@ var i = 0,
     duration = 400,
     root;
 
+function nodeSort(a, b) {
+	if (a.hasChildren && b.hasChildren) {
+		return a.name.localeCompare(b.name);
+	}
+	else if (a.hasChildren) {
+		return -1;
+	}
+	else if (b.hasChildren) {
+		return 1;
+	}
+	return a.name.localeCompare(b.name);
+}
+
 var tree = d3.layout.tree()
-    .nodeSize([0, 20]);
-//    .sort(function (a, b) {
-//	if ((a.children || a._children) && (b.children || b._children)) {
-//		return a.name.localeCompare(b.name);
-//	}
-//	else if (a.children || a._children) {
-//		return -1;
-//	}
-//	else if (b.children || b._children) {
-//		return 1;
-//	}
-//	return a.name.localeCompare(b.name);
-//    });
+    .nodeSize([0, 20])
+    .sort(nodeSort);
 
 var diagonal = d3.svg.diagonal()
     .projection(function(d) { return [d.y, d.x]; });
@@ -75,7 +77,7 @@ d3.json("/tree/{{ index }}").send('POST', JSON.stringify({
   }), function(error, flare) {
   flare.x0 = 0;
   flare.y0 = 0;
-  flare.children.forEach(toggleAll);
+  flare.children.sort(nodeSort).forEach(toggleAll);
   update(root = flare);
 });
 
@@ -149,8 +151,8 @@ function update(source) {
   link.enter().insert("path", "g")
       .attr("class", "link")
       .attr("d", function(d) {
-        var o = {x: source.x0, y: source.y0};
-        return diagonal({source: o, target: o});
+	var o = {x: source.x0, y: source.y0};
+	return diagonal({source: o, target: o});
       })
     .transition()
       .duration(duration)
@@ -165,8 +167,8 @@ function update(source) {
   link.exit().transition()
       .duration(duration)
       .attr("d", function(d) {
-        var o = {x: source.x, y: source.y};
-        return diagonal({source: o, target: o});
+	var o = {x: source.x, y: source.y};
+	return diagonal({source: o, target: o});
       })
       .remove();
 
@@ -198,7 +200,7 @@ function click(d) {
 		]
       }), function(error, node) {
       d.children = node.children;
-      d.children.forEach(toggleAll);
+      d.children.sort(nodeSort).forEach(toggleAll);
       update(d);
     });
   }
