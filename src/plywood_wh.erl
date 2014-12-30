@@ -65,8 +65,6 @@ cleanOptions([{Class, Value} | Rest], Accum) ->
         cleanOptions(Rest, appendMap(NewKey, NewVal, Accum)).
 
 
-cleanField(<<"truncate">>, Depth) when is_integer(Depth) ->
-        {truncate, Depth};
 cleanField(<<"filter">>, #{ <<"field">> := Field, <<"op">> := Op, <<"value">> := Val }) ->
         {filter, {Field, binary_to_existing_atom(Op, utf8), Val}};
 cleanField(Field, Value) -> {Field, Value}.
