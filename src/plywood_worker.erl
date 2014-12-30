@@ -69,10 +69,7 @@ handle_call({delete, Index, Data}, _From, State) ->
         ok = plywood:delete(Index, jiffy:decode(Data, [return_maps])),
         {stop, normal, ok, State};
 handle_call({lookup, Index, Path, Opts}, _From, State) ->
-        Return = try plywood:export(
-                lists:reverse(Path),
-                plywood:processTree(plywood:lookup(Index, Path), Opts)
-        ) of
+        Return = try plywood:lookup(Index, Path) of
                 Data -> {ok, jiffy:encode(Data)}
         catch
                 Error -> Error
@@ -97,4 +94,3 @@ code_change(_OldVsn, State, _Extra) ->
 %% ------------------------------------------------------------------
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
-

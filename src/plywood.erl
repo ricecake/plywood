@@ -4,7 +4,7 @@
 -export([start/0]).
 
 %% Lookup/update exports
--export([lookup/2, add/2, delete/2, deleteByValue/2]).
+-export([lookup/2, lookup/3, add/2, delete/2, deleteByValue/2]).
 
 %% Processing exports
 -export([export/1, export/2, truncate/2]).
@@ -17,12 +17,17 @@
 
 start() -> application:ensure_all_started(plywood).
 
-lookup(Index, Key) when is_binary(Key) ->
-        KeyParts = binary:split(Key, <<"/">>, [global]),
-        lookup(Index, KeyParts);
 lookup(Index, KeyParts) when is_list(KeyParts) ->
-        {ok, RootNode} = plywood_db:fetch(primary_tree, Index),
-        doLookup(KeyParts, RootNode).
+	Key = makeNodeID(KeyParts, <<"/">>),
+        lookup(Index, Key);
+lookup(Index, Key) when is_binary(Key) ->
+        lookup(Index, Key, infinity).
+
+lookup(Index, KeyParts, Depth) when is_list(KeyParts) ->
+	Key = makeNodeID(KeyParts, <<"/">>),
+        lookup(Index, Key, Depth);
+lookup(Index, Key, Depth) when is_binary(Key) ->
+        doLookup({Index, Key}, 0, Depth).
 
 add(Index, Rev) when is_map(Rev) ->
         makeTree(Index, Rev, fun mergeStore/2).
@@ -59,18 +64,26 @@ processTree(Tree, Opts) when is_map(Opts) ->
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
 
-doLookup([<<>> | Rest], Node) -> doLookup(Rest, Node);
-doLookup([], Node) -> Node;
-doLookup([Label | Rest], {Node, _Data}) when is_map(Node) ->
-        NewNode = maps:get(Label, Node),
-        doLookup(Rest, NewNode).
+doLookup(NodeKey, Depth, MaxDepth) when Depth < MaxDepth ->
+	{ok, Node} = plywood_db:fetch(primary_tree, NodeKey),
+	case maps:find(children, Node) of
+		{ok, Children} -> maps:put(children, [ doLookup(Child, Depth+1, MaxDepth) || Child <- Children], Node);
+		error -> Node
+	end;
+doLookup(NodeKey, Depth, MaxDepth) when Depth >= MaxDepth ->
+	{ok, Node} = plywood_db:fetch(primary_tree, NodeKey),
+	maps:remove(children, Node).
 
-makeTree(Index, Revision, Op) when is_map(Revision) -> doMakeTree(Index, [{maps:to_list(Revision), []}], Op).
+
+makeTree(Index, Revision, Op) when is_map(Revision) -> doMakeTree(Index, [{[{<<"">>, Revision}], []}], Op).
 
 doMakeTree(_, [], _) -> ok;
 doMakeTree(Index, [{[], _Path} | Rest], Op) -> doMakeTree(Index, Rest, Op);
 doMakeTree(Index, [{[{Name, SubTree} | RestLevel], Path} | Rest], Op) when is_map(SubTree) ->
-        Loc = [Name |Path],
+        Loc = case size(Name) of
+		0 -> Path;
+		_ -> [Name |Path]
+	end,
         Children = maps:to_list(SubTree),
         NewLevel = {Children, Loc},
         Node = #{
@@ -86,7 +99,10 @@ doMakeTree(Index, [{[{Name, SubTree} | RestLevel], Path} | Rest], Op) when is_ma
         ok = Op(Index, Node),
         doMakeTree(Index, [NewLevel, {RestLevel, Path} | Rest], Op);
 doMakeTree(Index, [{[{Name, Data} | RestLevel], Path} | Rest], Op) when is_list(Data) ->
-        Loc = [Name |Path],
+        Loc = case size(Name) of
+		0 -> Path;
+		_ -> [Name |Path]
+	end,
         Node = #{
 		id   => makeNodeID(lists:reverse(Loc), <<"/">>),
 		name => Name,
