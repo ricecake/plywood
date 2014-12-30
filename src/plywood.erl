@@ -7,7 +7,6 @@
 -export([lookup/2, lookup/3, add/2, delete/2, deleteByValue/2]).
 
 %% Processing exports
--export([export/1, export/2, truncate/2]).
 -export([processTree/2, processOps/0]).
 
 -compile(export_all).
@@ -38,21 +37,6 @@ delete(Index, Rev) when is_map(Rev) ->
         plywood_db:store(primary_tree, Index, demergeTrees(FullTree, RevTree)).
 
 deleteByValue(_Index, _Value) -> ok.
-
-truncate({SubTree, _Data} = Node, Depth) when is_map(SubTree)->
-        Truncator = fun(D,P) when length(P) < Depth -> {continue, D}; ({_,D},_)-> {done, {#{}, D}} end,
-        transform(Truncator, Node, []).
-
-export({SubTree, _Data} = Node) when is_map(SubTree)-> export([], Node);
-export(Index) ->
-        {ok, RootNode} = plywood_db:fetch(primary_tree, Index),
-        export(RootNode).
-
-export([], {SubTree, _Data} = Node) when is_map(SubTree)-> prepExport(<<"/">>, [], Node);
-export([Name |Rest], {SubTree, _Data} = Node) when is_map(SubTree)-> prepExport(Name, Rest, Node);
-export(Path, Index) ->
-        {ok, RootNode} = plywood_db:fetch(primary_tree, Index),
-        export(Path, RootNode).
 
 processOps() -> [aggregate, filter, truncate].
 
@@ -156,26 +140,6 @@ remove(From, Items) when is_list(From), is_list(Items) ->
 makeNodeID([], _Sep) -> <<"/">>;
 makeNodeID([<<"/">>], _Sep) -> <<"/">>;
 makeNodeID(Parts, Sep) -> << << Sep/binary, Part/binary>> || Part <- Parts, Part =/= <<"/">> >>.
-
-prepExport(Name, Path, {SubTree, []})->
-	#{
-		id   => makeNodeID(lists:reverse([Name |Path]), <<"/">>),
-		name => Name,
-		children => [ prepExport(Key, [Name |Path], Value) || {Key, Value} <-maps:to_list(SubTree)]
-	};
-prepExport(Name, Path, {#{}, Data})  ->
-	#{
-		id   => makeNodeID(lists:reverse([Name |Path]), <<"/">>),
-		name => Name,
-		data => Data
-	};
-prepExport(Name, Path, {SubTree, Data}) ->
-	#{
-		id   => makeNodeID(lists:reverse([Name |Path]), <<"/">>),
-		name => Name,
-		data => Data,
-		children => [ prepExport(Key, [Name |Path], Value) || {Key, Value} <-maps:to_list(SubTree)]
-	}.
 
 traverse(Operator, {SubTree, Data}, Path) when is_function(Operator), is_map(SubTree), is_list(Data), is_list(Path) ->
 	[ Operator(Datum, Path) || Datum <- Data],
