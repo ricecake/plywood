@@ -4,10 +4,9 @@
 -export([start/0]).
 
 %% Lookup/update exports
--export([lookup/2, add/2, delete/2, deleteByValue/2]).
+-export([lookup/2, lookup/3, add/2, delete/2, deleteByValue/2]).
 
 %% Processing exports
--export([export/1, export/2, truncate/2]).
 -export([processTree/2, processOps/0]).
 
 -compile(export_all).
@@ -17,44 +16,27 @@
 
 start() -> application:ensure_all_started(plywood).
 
-lookup(Index, Key) when is_binary(Key) ->
-        KeyParts = binary:split(Key, <<"/">>, [global]),
-        lookup(Index, KeyParts);
 lookup(Index, KeyParts) when is_list(KeyParts) ->
-        {ok, RootNode} = plywood_db:fetch(primary_tree, Index),
-        doLookup(KeyParts, RootNode).
+	Key = makeNodeID(KeyParts, <<"/">>),
+        lookup(Index, Key);
+lookup(Index, Key) when is_binary(Key) ->
+        lookup(Index, Key, infinity).
+
+lookup(Index, KeyParts, Depth) when is_list(KeyParts) ->
+	Key = makeNodeID(KeyParts, <<"/">>),
+        lookup(Index, Key, Depth);
+lookup(Index, Key, Depth) when is_binary(Key) ->
+        doLookup({Index, Key}, 0, Depth).
 
 add(Index, Rev) when is_map(Rev) ->
-        RevTree = makeTree(Rev),
-        NewTree = case plywood_db:getIfExists(primary_tree, Index) of
-                false -> RevTree;
-                {ok, FullTree} -> mergeTrees(FullTree, RevTree)
-        end,
-        plywood_db:store(primary_tree, Index, NewTree).
+        makeTree(Index, Rev, fun mergeStore/2).
 
 delete(Index, Rev) when is_map(Rev) ->
-        RevTree = makeTree(Rev),
-        {ok, FullTree} = plywood_db:fetch(primary_tree, Index),
-        plywood_db:store(primary_tree, Index, demergeTrees(FullTree, RevTree)).
+        makeTree(Index, Rev, fun deMergeStore/2).
 
 deleteByValue(_Index, _Value) -> ok.
 
-truncate({SubTree, _Data} = Node, Depth) when is_map(SubTree)->
-        Truncator = fun(D,P) when length(P) < Depth -> {continue, D}; ({_,D},_)-> {done, {#{}, D}} end,
-        transform(Truncator, Node, []).
-
-export({SubTree, _Data} = Node) when is_map(SubTree)-> export([], Node);
-export(Index) ->
-        {ok, RootNode} = plywood_db:fetch(primary_tree, Index),
-        export(RootNode).
-
-export([], {SubTree, _Data} = Node) when is_map(SubTree)-> prepExport(<<"/">>, [], Node);
-export([Name |Rest], {SubTree, _Data} = Node) when is_map(SubTree)-> prepExport(Name, Rest, Node);
-export(Path, Index) ->
-        {ok, RootNode} = plywood_db:fetch(primary_tree, Index),
-        export(Path, RootNode).
-
-processOps() -> [aggregate, filter, truncate].
+processOps() -> [aggregate, filter].
 
 processTree(Tree, Opts) when is_map(Opts) ->
         OpList = buildOpList(undefined, [], Opts, processOps(), []),
@@ -64,48 +46,95 @@ processTree(Tree, Opts) when is_map(Opts) ->
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
 
-doLookup([<<>> | Rest], Node) -> doLookup(Rest, Node);
-doLookup([], Node) -> Node;
-doLookup([Label | Rest], {Node, _Data}) when is_map(Node) ->
-        NewNode = maps:get(Label, Node),
-        doLookup(Rest, NewNode).
+doLookup(NodeKey, Depth, MaxDepth) when Depth < MaxDepth ->
+	{ok, Node} = plywood_db:fetch(primary_tree, NodeKey),
+	case maps:find(children, Node) of
+		{ok, Children} -> maps:put(children, [ doLookup(Child, Depth+1, MaxDepth) || Child <- Children], Node);
+		error -> Node
+	end;
+doLookup(NodeKey, Depth, MaxDepth) when Depth >= MaxDepth ->
+	{ok, Node} = plywood_db:fetch(primary_tree, NodeKey),
+	maps:remove(children, Node).
 
-convertNode(Value) when is_map(Value) -> {doMakeTree(Value), []};
-convertNode(Value) when is_list(Value) -> {#{}, lists:usort(Value)}.
 
-makeTree(Revision) when is_map(Revision) -> {doMakeTree(Revision), []}.
-doMakeTree(Revision) when is_map(Revision) ->
-        compactNode(maps:map(fun(_Key, Value) -> convertNode(Value) end, Revision)).
+makeTree(Index, Revision, Op) when is_map(Revision) -> doMakeTree(Index, [{[{<<"">>, Revision}], []}], Op).
 
-mergeTrees({LsubTree, Ldata}, {RsubTree, Rdata}) ->
-        NewData = lists:umerge(Ldata, Rdata),
-        {hashMerge(LsubTree, RsubTree), NewData}.
+doMakeTree(_, [], _) -> ok;
+doMakeTree(Index, [{[], _Path} | Rest], Op) -> doMakeTree(Index, Rest, Op);
+doMakeTree(Index, [{[{Name, SubTree} | RestLevel], Path} | Rest], Op) when is_map(SubTree) ->
+        Loc = case size(Name) of
+		0 -> Path;
+		_ -> [Name |Path]
+	end,
+        Children = maps:to_list(SubTree),
+        NewLevel = {Children, Loc},
+        Node = #{
+		id   => makeNodeID(lists:reverse(Loc), <<"/">>),
+		name => Name,
+		children => lists:usort([
+                        {Index, makeNodeID(lists:reverse([ChildName |Loc]), <<"/">>)}
+                                || {ChildName, _ } <- Children
+                ]),
+                hasChildren => true,
+                hasData => false
+        },
+        ok = Op(Index, Node),
+        doMakeTree(Index, [NewLevel, {RestLevel, Path} | Rest], Op);
+doMakeTree(Index, [{[{Name, Data} | RestLevel], Path} | Rest], Op) when is_list(Data) ->
+        Loc = case size(Name) of
+		0 -> Path;
+		_ -> [Name |Path]
+	end,
+        Node = #{
+		id   => makeNodeID(lists:reverse(Loc), <<"/">>),
+		name => Name,
+		data => lists:usort(Data),
+                hasChildren => false,
+                hasData => true
+        },
+        ok = Op(Index, Node),
+        doMakeTree(Index, [{RestLevel, Path} | Rest], Op).
 
-hashMerge(Left, Right) when is_map(Left), is_map(Right) -> hashMerge(Left, maps:to_list(Right));
-hashMerge(Left, [])    when is_map(Left) -> Left;
-hashMerge(Left, [{Key, Value} |Rest]) when is_map(Left) ->
-        NewValue = case maps:find(Key, Left) of
-                error -> Value;
-                {ok, LeftValue} -> mergeTrees(LeftValue, Value)
+mergeStore(Index, #{id := Id} = Data) ->
+        Key = {Index, Id},
+        NewNode = case plywood_db:getIfExists(primary_tree, Key) of
+                false -> Data;
+                {ok, OldNode} -> mergeNodes(OldNode, maps:to_list(Data))
         end,
-        hashMerge(maps:put(Key, NewValue, Left), Rest).
+        plywood_db:store(primary_tree, Key, NewNode).
+
+deMergeStore(Index, #{id := Id} = Data) ->
+        Key = {Index, Id},
+        case plywood_db:getIfExists(primary_tree, Key) of
+                false -> ok;
+                {ok, OldNode} ->
+			case deMergeNodes(OldNode, Data) of
+				noop -> ok;
+				NewNode -> plywood_db:store(primary_tree, Key, NewNode)
+			end
+        end.
+
+mergeNodes(Left, []) -> Left;
+mergeNodes(Left, [{id,   _} |Right]) -> mergeNodes(Left, Right);
+mergeNodes(Left, [{name, _} |Right]) -> mergeNodes(Left, Right);
+mergeNodes(#{data := Old} =Left, [{data, New} |Right]) ->
+        mergeNodes(maps:put(data, lists:umerge(Old, New), Left), Right);
+mergeNodes(#{children := Old} =Left, [{children, New} |Right]) ->
+        mergeNodes(maps:put(children, lists:umerge(Old, New), Left), Right);
+mergeNodes(#{hasChildren := Old} =Left, [{hasChildren, New} |Right]) ->
+        mergeNodes(maps:put(hasChildren, (Old or New), Left), Right);
+mergeNodes(#{hasData := Old} =Left, [{hasData, New} |Right]) ->
+        mergeNodes(maps:put(hasData, (Old or New), Left), Right).
 
 compactNode(Node) when is_map(Node) ->
         maps:from_list([ {K, V} || {K, V} <- maps:to_list(Node), V =/= {#{}, []}]).
 
-demergeTrees({LsubTree, Ldata}, {RsubTree, Rdata}) ->
-        NewData = remove(Ldata, Rdata),
-        NewSubTree = hashDelete(LsubTree, RsubTree),
-        {compactNode(NewSubTree), NewData}.
-
-hashDelete(Left, Right) when is_map(Left), is_map(Right) -> hashDelete(Left, maps:to_list(Right));
-hashDelete(Left, [])    when is_map(Left) -> Left;
-hashDelete(Left, [{Key, Value} |Rest]) when is_map(Left) ->
-        NewValue = case maps:find(Key, Left) of
-                error -> Value;
-                {ok, LeftValue} -> demergeTrees(LeftValue, Value)
-        end,
-        hashDelete(maps:put(Key, NewValue, Left), Rest).
+deMergeNodes(#{ data := OldData } = Old, #{ data := PurgeData }) ->
+	case remove(OldData, PurgeData) of
+		OldData -> noop;
+		NewData -> maps:put(data, NewData, Old)
+	end;
+deMergeNodes(_, _) -> noop.
 
 remove(From, Items) when is_list(From), is_list(Items) ->
         ordsets:to_list(ordsets:subtract(ordsets:from_list(From), ordsets:from_list(Items))).
@@ -113,26 +142,6 @@ remove(From, Items) when is_list(From), is_list(Items) ->
 makeNodeID([], _Sep) -> <<"/">>;
 makeNodeID([<<"/">>], _Sep) -> <<"/">>;
 makeNodeID(Parts, Sep) -> << << Sep/binary, Part/binary>> || Part <- Parts, Part =/= <<"/">> >>.
-
-prepExport(Name, Path, {SubTree, []})->
-	#{
-		id   => makeNodeID(lists:reverse([Name |Path]), <<"/">>),
-		name => Name,
-		children => [ prepExport(Key, [Name |Path], Value) || {Key, Value} <-maps:to_list(SubTree)]
-	};
-prepExport(Name, Path, {#{}, Data})  ->
-	#{
-		id   => makeNodeID(lists:reverse([Name |Path]), <<"/">>),
-		name => Name,
-		data => Data
-	};
-prepExport(Name, Path, {SubTree, Data}) ->
-	#{
-		id   => makeNodeID(lists:reverse([Name |Path]), <<"/">>),
-		name => Name,
-		data => Data,
-		children => [ prepExport(Key, [Name |Path], Value) || {Key, Value} <-maps:to_list(SubTree)]
-	}.
 
 traverse(Operator, {SubTree, Data}, Path) when is_function(Operator), is_map(SubTree), is_list(Data), is_list(Path) ->
 	[ Operator(Datum, Path) || Datum <- Data],
@@ -184,8 +193,6 @@ getOperator(filter, {Field, 'unlike', Value}) ->
 getOperator(filter, {Field, 'unilike', Value}) ->
         Regexp = buildRegexFun(Value, true, [caseless]),
         buildFilterFun(Regexp, Field);
-getOperator(truncate, Depth) when is_integer(Depth) ->
-        fun(Tree) -> truncate(Tree, Depth) end;
 getOperator(_, _) -> fun(Tree) -> Tree end.
 
 buildOpList(Token, [Op | Rest], OpsMap, Seq, List) ->

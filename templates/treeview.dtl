@@ -36,20 +36,22 @@ var i = 0,
     duration = 400,
     root;
 
-var tree = d3.layout.tree()
-    .nodeSize([0, 20])
-    .sort(function (a, b) {
-	if ((a.children || a._children) && (b.children || b._children)) {
+function nodeSort(a, b) {
+	if (a.hasChildren && b.hasChildren) {
 		return a.name.localeCompare(b.name);
 	}
-	else if (a.children || a._children) {
+	else if (a.hasChildren) {
 		return -1;
 	}
-	else if (b.children || b._children) {
+	else if (b.hasChildren) {
 		return 1;
 	}
 	return a.name.localeCompare(b.name);
-    });
+}
+
+var tree = d3.layout.tree()
+    .nodeSize([0, 20])
+    .sort(nodeSort);
 
 var diagonal = d3.svg.diagonal()
     .projection(function(d) { return [d.y, d.x]; });
@@ -58,6 +60,13 @@ var svg = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+function toggleAll(d) {
+  if (d.children) {
+    d.children.forEach(toggleAll);
+    toggle(d);
+  }
+}
 
 d3.json("/tree/{{ index }}").send('POST', JSON.stringify({
 //    truncate: 2,
@@ -68,13 +77,7 @@ d3.json("/tree/{{ index }}").send('POST', JSON.stringify({
   }), function(error, flare) {
   flare.x0 = 0;
   flare.y0 = 0;
-  function toggleAll(d) {
-    if (d.children) {
-      d.children.forEach(toggleAll);
-      toggle(d);
-    }
-  }
-  flare.children.forEach(toggleAll);
+  flare.children.sort(nodeSort).forEach(toggleAll);
   update(root = flare);
 });
 
@@ -148,8 +151,8 @@ function update(source) {
   link.enter().insert("path", "g")
       .attr("class", "link")
       .attr("d", function(d) {
-        var o = {x: source.x0, y: source.y0};
-        return diagonal({source: o, target: o});
+	var o = {x: source.x0, y: source.y0};
+	return diagonal({source: o, target: o});
       })
     .transition()
       .duration(duration)
@@ -164,8 +167,8 @@ function update(source) {
   link.exit().transition()
       .duration(duration)
       .attr("d", function(d) {
-        var o = {x: source.x, y: source.y};
-        return diagonal({source: o, target: o});
+	var o = {x: source.x, y: source.y};
+	return diagonal({source: o, target: o});
       })
       .remove();
 
@@ -184,15 +187,27 @@ function click(d) {
   if (d.children) {
     d._children = d.children;
     d.children = null;
-  } else {
+    update(d);
+  } else if (d._children) {
     d.children = d._children;
     d._children = null;
+    update(d);
+  } else if (d.hasChildren) {
+    d3.json("/tree/{{ index }}"+d.id).send('POST', JSON.stringify({
+	filter: [
+		  { field: 'size', op: '>', value: 3},
+		  { field: 'path', op: 'ilike', value: 'git' }
+		]
+      }), function(error, node) {
+      d.children = node.children;
+      d.children.sort(nodeSort).forEach(toggleAll);
+      update(d);
+    });
   }
-  update(d);
 }
 
 function color(d) {
-  return d._children ? "#3182bd" : d.children ? "#c6dbef" : "#fd8d3c";
+  return d.hasChildren ? "#3182bd" : d.children ? "#c6dbef" : "#fd8d3c";
 }
 function toggle(d) {
 
