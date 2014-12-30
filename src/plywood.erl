@@ -32,13 +32,11 @@ add(Index, Rev) when is_map(Rev) ->
         makeTree(Index, Rev, fun mergeStore/2).
 
 delete(Index, Rev) when is_map(Rev) ->
-        RevTree = makeTree(Index, Rev, fun demergeTrees/2),
-        {ok, FullTree} = plywood_db:fetch(primary_tree, Index),
-        plywood_db:store(primary_tree, Index, demergeTrees(FullTree, RevTree)).
+        makeTree(Index, Rev, fun deMergeStore/2).
 
 deleteByValue(_Index, _Value) -> ok.
 
-processOps() -> [aggregate, filter, truncate].
+processOps() -> [aggregate, filter].
 
 processTree(Tree, Opts) when is_map(Opts) ->
         OpList = buildOpList(undefined, [], Opts, processOps(), []),
@@ -105,6 +103,17 @@ mergeStore(Index, #{id := Id} = Data) ->
         end,
         plywood_db:store(primary_tree, Key, NewNode).
 
+deMergeStore(Index, #{id := Id} = Data) ->
+        Key = {Index, Id},
+        case plywood_db:getIfExists(primary_tree, Key) of
+                false -> ok;
+                {ok, OldNode} ->
+			case deMergeNodes(OldNode, Data) of
+				noop -> ok;
+				NewNode -> plywood_db:store(primary_tree, Key, NewNode)
+			end
+        end.
+
 mergeNodes(Left, []) -> Left;
 mergeNodes(Left, [{id,   _} |Right]) -> mergeNodes(Left, Right);
 mergeNodes(Left, [{name, _} |Right]) -> mergeNodes(Left, Right);
@@ -120,19 +129,12 @@ mergeNodes(#{hasData := Old} =Left, [{hasData, New} |Right]) ->
 compactNode(Node) when is_map(Node) ->
         maps:from_list([ {K, V} || {K, V} <- maps:to_list(Node), V =/= {#{}, []}]).
 
-demergeTrees({LsubTree, Ldata}, {RsubTree, Rdata}) ->
-        NewData = remove(Ldata, Rdata),
-        NewSubTree = hashDelete(LsubTree, RsubTree),
-        {compactNode(NewSubTree), NewData}.
-
-hashDelete(Left, Right) when is_map(Left), is_map(Right) -> hashDelete(Left, maps:to_list(Right));
-hashDelete(Left, [])    when is_map(Left) -> Left;
-hashDelete(Left, [{Key, Value} |Rest]) when is_map(Left) ->
-        NewValue = case maps:find(Key, Left) of
-                error -> Value;
-                {ok, LeftValue} -> demergeTrees(LeftValue, Value)
-        end,
-        hashDelete(maps:put(Key, NewValue, Left), Rest).
+deMergeNodes(#{ data := OldData } = Old, #{ data := PurgeData }) ->
+	case remove(OldData, PurgeData) of
+		OldData -> noop;
+		NewData -> maps:put(data, NewData, Old)
+	end;
+deMergeNodes(_, _) -> noop.
 
 remove(From, Items) when is_list(From), is_list(Items) ->
         ordsets:to_list(ordsets:subtract(ordsets:from_list(From), ordsets:from_list(Items))).
@@ -191,8 +193,6 @@ getOperator(filter, {Field, 'unlike', Value}) ->
 getOperator(filter, {Field, 'unilike', Value}) ->
         Regexp = buildRegexFun(Value, true, [caseless]),
         buildFilterFun(Regexp, Field);
-getOperator(truncate, Depth) when is_integer(Depth) ->
-        fun(Tree) -> truncate(Tree, Depth) end;
 getOperator(_, _) -> fun(Tree) -> Tree end.
 
 buildOpList(Token, [Op | Rest], OpsMap, Seq, List) ->
