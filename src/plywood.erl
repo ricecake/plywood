@@ -240,3 +240,7 @@ buildRegexFun(Pattern, Invert, Opts) ->
         fun(DataValue) ->
                 (match == re:run(DataValue, Regexp, [{capture, none}])) xor Invert
         end.
+
+fastConcat([], B) -> B;
+fastConcat(A,B) when length(A) > length(B) -> fastConcat(B,A);
+fastConcat([Ah|At],B) -> fastConcat(At, [Ah | B]).
