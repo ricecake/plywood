@@ -9,7 +9,7 @@ start_link(Name, Base) -> open(Name, Base).
 open(Name) when is_atom(Name) -> open(Name, "./").
 open(Name, Base) when is_atom(Name), is_list(Base) ->
         File = lists:append([Base, atom_to_list(Name), ".hanoidb"]),
-        hanoidb:open_link({local, Name}, File, [{compress, snappy}]).
+        hanoidb:open_link({local, Name}, File, [{compress, snappy}, {top_level, 15}, {page_size, 16384}, {sync_strategy, none}]).
 
 close(Db) -> hanoidb:close(Db).
 
