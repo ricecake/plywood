@@ -2,7 +2,7 @@
 
 -export([start_link/1, start_link/2]).
 -export([open/1, open/2, close/1, store/3, fetch/2, exists/2, getIfExists/2]).
-
+-export([asyncStore/3]).
 start_link(Name) -> open(Name).
 start_link(Name, Base) -> open(Name, Base).
 
@@ -12,6 +12,12 @@ open(Name, Base) when is_atom(Name), is_list(Base) ->
         hanoidb:open_link({local, Name}, File, [{compress, snappy}, {top_level, 15}, {page_size, 16384}, {sync_strategy, none}]).
 
 close(Db) -> hanoidb:close(Db).
+
+asyncStore(Db, Key, Value) ->
+	spawn(fun()->
+		store(Db, Key, Value)
+	end),
+	ok.
 
 store(Db, Key, Value) -> hanoidb:put(Db, term_to_binary(Key), term_to_binary(Value)).
 fetch(Db, Key)        ->
