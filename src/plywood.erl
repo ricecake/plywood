@@ -97,11 +97,14 @@ doMakeTree(Index, [{[{Name, Data} | RestLevel], Path} | Rest], Op) when is_list(
 
 mergeStore(Index, #{id := Id} = Data) ->
         Key = {Index, Id},
-        NewNode = case plywood_db:getIfExists(primary_tree, Key) of
-                false -> Data;
-                {ok, OldNode} -> mergeNodes(OldNode, maps:to_list(Data))
-        end,
-        plywood_db:store(primary_tree, Key, NewNode).
+        case plywood_db:getIfExists(primary_tree, Key) of
+                false -> plywood_db:store(primary_tree, Key, Data);
+                {ok, OldNode} ->
+			case mergeNodes(OldNode, maps:to_list(Data)) of
+				OldNode -> ok;
+				NewNode -> plywood_db:store(primary_tree, Key, NewNode)
+			end
+        end.
 
 deMergeStore(Index, #{id := Id} = Data) ->
         Key = {Index, Id},
