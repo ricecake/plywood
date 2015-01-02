@@ -20,7 +20,7 @@ start(_StartType, _StartArgs) ->
 			{"/css/[...]", cowboy_static, {priv_dir, plywood, "css/" }}
 		]}
 	]),
-	{ok, _} = cowboy:start_http(http, 25, [{ip, {127,0,0,1}}, {port, 8080}],
+	{ok, _} = cowboy:start_http(http, 25, [{port, 8080}],
         				[
 						{compress, true},
 						{env, [{dispatch, Dispatch}]}
