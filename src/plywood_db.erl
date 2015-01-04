@@ -7,7 +7,7 @@
 %% ------------------------------------------------------------------
 
 -export([start_link/1, start_link/2]).
--export([store/3, fetch/2, exists/2, getIfExists/2]).
+-export([store/3, fetch/2, exists/2, getIfExists/2, delete/2]).
 -export([asyncStore/3]).
 
 %% ------------------------------------------------------------------
@@ -51,6 +51,9 @@ getIfExists(Db, Key) ->
                 {ok, BinaryTerm} -> {ok, binary_to_term(BinaryTerm)};
                 not_found         -> false
         end.
+
+delete(Db, Key) ->
+        eleveldb:delete(getRef(Db), term_to_binary(Key), []).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Definitions
