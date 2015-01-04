@@ -149,29 +149,59 @@ makeNodeID([], _Sep) -> <<"/">>;
 makeNodeID([<<"/">>], _Sep) -> <<"/">>;
 makeNodeID(Parts, Sep) -> << << Sep/binary, Part/binary>> || Part <- Parts, Part =/= <<"/">> >>.
 
-traverse(Operator, {SubTree, Data}, Path) when is_function(Operator), is_map(SubTree), is_list(Data), is_list(Path) ->
-	[ Operator(Datum, Path) || Datum <- Data],
-	[ ok = traverse(Operator, Value, [Name | Path]) || {Name, Value} <- maps:to_list(SubTree)],
-	ok.
+traverse(_Operator, []) -> ok;
+traverse(Operator, [NodeKey |Rest]) when is_function(Operator), is_map(NodeKey) ->
+	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
+	case maps:find(data, Node) of
+		{ok, Data} -> [ Operator(Datum, Id, Name) || Datum <- Data];
+		error -> ok
+	end,
+	case maps:find(children, Node) of
+		{ok, Children} -> traverse(Operator, fastConcat(Rest, Children));
+		error -> traverse(Operator, Rest)
+	end.
 
-accumulate(Operator, Acc, {SubTree, Data}, Path) when is_function(Operator), is_map(SubTree), is_list(Data), is_list(Path) ->
-	AccLevel = lists:foldl(fun(Datum, AccIn) -> Operator(Datum, AccIn, Path) end, Acc, Data),
-	lists:foldl(fun({Name, Value}, AccSub)-> accumulate(Operator, AccSub, Value, [Name | Path]) end, AccLevel, maps:to_list(SubTree)).
+accumulate(_Operator, Acc, []) -> Acc;
+accumulate(Operator, Acc, [NodeKey |Rest]) when is_function(Operator), is_map(NodeKey) ->
+	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
+	NodeAcc = case maps:find(data, Node) of
+		{ok, Data} -> lists:foldl(fun(Datum, AccIn) -> Operator(Datum, AccIn, Id, Name) end, Acc, Data);
+		error -> Acc
+	end,
+	case maps:find(children, Node) of
+		{ok, Children} -> accumulate(Operator, NodeAcc, fastConcat(Rest, Children));
+		error -> accumulate(Operator, NodeAcc, Rest)
+	end.
 
-filter(Operator, {SubTree, Data}, Path) when is_function(Operator), is_map(SubTree), is_list(Data), is_list(Path) ->
-	NewData = [ Datum || Datum <- Data, Operator(Datum, Path)],
-	{compactNode(maps:map(fun(Name, Value) -> filter(Operator, Value, [Name | Path]) end, SubTree)), NewData}.
+filter(Operator, NodeKey) when is_function(Operator), is_map(NodeKey) ->
+	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
+	NewNode = case maps:find(data, Node) of
+		{ok, Data} -> maps:put(data, [ Datum || Datum <- Data, Operator(Datum, Id, Name)], Node);
+		error -> Node
+	end,
+	case maps:find(children, NewNode) of
+		{ok, Children} -> maps:put(children, [filter(Operator, Child) || Child <- Children], NewNode);
+		error -> NewNode
+	end.
 
-map(Operator, {SubTree, Data}, Path) when is_function(Operator), is_map(SubTree), is_list(Data), is_list(Path) ->
-	NewData = [ Operator(Datum, Path) || Datum <- Data],
-	{maps:map(fun(Name, Value) -> map(Operator, Value, [Name | Path]) end, SubTree), NewData}.
+map(Operator, NodeKey) when is_function(Operator), is_map(NodeKey) ->
+	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
+	NewNode = case maps:find(data, Node) of
+		{ok, Data} -> maps:put(data, [ Operator(Datum, Id, Name) || Datum <- Data], Node);
+		error -> Node
+	end,
+	case maps:find(children, NewNode) of
+		{ok, Children} -> maps:put(children, [map(Operator, Child) || Child <- Children], NewNode);
+		error -> NewNode
+	end.
 
-transform(Operator, {SubTree, Data} = Node, Path) when is_function(Operator), is_map(SubTree), is_list(Data), is_list(Path) ->
-        case Operator(Node, Path) of
-                {continue, {NewSubTree, NewData}} ->
-                        {maps:map(fun(Name, Value) -> transform(Operator, Value, [Name | Path]) end, NewSubTree), NewData};
-                {done, NewNode} -> NewNode
-        end.
+transform(Operator, NodeKey) when is_function(Operator), is_map(NodeKey) ->
+	{ok, Node} = plywood_db:fetch(primary_tree, NodeKey),
+	NewNode = Operator(Node),
+	case maps:find(children, NewNode) of
+		{ok, Children} -> maps:put(children, [transform(Operator, Child) || Child <- Children], NewNode);
+		error -> NewNode
+	end.
 
 getOperator(aggregate, {Field, max}) -> fun(Tree) -> Tree end;
 getOperator(aggregate, {Field, min}) -> fun(Tree) -> Tree end;
@@ -219,23 +249,21 @@ applyTransforms(Tree, [Op | Rest]) ->
 
 buildFilterFun(Op, <<"name">>) -> 
         fun(Tree) ->
-                filter(fun(_Data, [Name |_Path]) -> Op(Name) end, Tree, [])
+                filter(fun(_Data, _Id, Name) -> Op(Name) end, Tree)
         end;
 buildFilterFun(Op, <<"path">>) -> 
         fun(Tree) ->
-                filter(fun(_Data, Path) ->
-                        Op(makeNodeID(lists:reverse(Path), <<"/">>))
-                end, Tree, [])
+                filter(fun(_Data, Id, _Name) -> Op(Id) end, Tree)
         end;
 buildFilterFun(Op, Field) ->
         fun(Tree) ->
-                filter(fun(Data, _Path) when is_map(Data) ->
+                filter(fun(Data, _Id, _Name) when is_map(Data) ->
                         case maps:find(Field, Data) of
                                 {ok, DataValue} -> Op(DataValue);
                                 _ -> false
                         end;
-                        (_Data, _Path) -> false
-                end, Tree, [])
+                        (_Data, _Id, _Name) -> false
+                end, Tree)
         end.
 
 buildRegexFun(Pattern, Invert, Opts) ->
