@@ -10,4 +10,5 @@ erl_crash.dump
 rel/windex/
 *.swp
 *.hanoidb
+*.lvldb
 rel/plywood
