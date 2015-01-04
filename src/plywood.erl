@@ -34,6 +34,9 @@ add(Index, Rev) when is_map(Rev) ->
 delete(Index, Rev) when is_map(Rev) ->
         makeTree(Index, Rev, fun deMergeStore/2).
 
+compact(Index) when is_binary(Index) ->
+        doCompaction([{Index, <<"/">>}]).
+
 deleteByValue(_Index, _Value) -> ok.
 
 processOps() -> [aggregate, filter].
@@ -243,4 +246,18 @@ buildRegexFun(Pattern, Invert, Opts) ->
 
 fastConcat([], B) -> B;
 fastConcat(A,B) when length(A) > length(B) -> fastConcat(B,A);
-fastConcat([Ah|At],B) -> fastConcat(At, [Ah | B]).
+fastConcat(A,B) -> A++B.
+
+doCompaction([]) -> ok;
+doCompaction([CurrNode |Rest]) ->
+        case checkPrune(CurrNode) of
+                {prune, []} ->
+                        ok = plywood_db:delete(primary_tree, CurrNode),
+                        doCompaction(Rest);
+                {keep, Candidates} -> doCompaction(fastConcat(Rest, Candidates))
+        end.
+
+%checkPrune(#{hasChildren := false, data := [], id := Id}) ->
+checkPrune(Id) ->
+        {ok, Node} = plywood_db:fetch(primary_tree, Id),
+        
