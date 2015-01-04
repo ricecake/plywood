@@ -34,6 +34,9 @@ add(Index, Rev) when is_map(Rev) ->
 delete(Index, Rev) when is_map(Rev) ->
         makeTree(Index, Rev, fun deMergeStore/2).
 
+compact(Index) when is_binary(Index) ->
+        doCompaction([{{Index, <<"/">>}, undefined}]).
+
 deleteByValue(_Index, _Value) -> ok.
 
 processOps() -> [aggregate, filter].
@@ -271,4 +274,43 @@ buildRegexFun(Pattern, Invert, Opts) ->
 
 fastConcat([], B) -> B;
 fastConcat(A,B) when length(A) > length(B) -> fastConcat(B,A);
-fastConcat([Ah|At],B) -> fastConcat(At, [Ah | B]).
+fastConcat(A,B) -> A++B.
+
+purge(NodeKey, undefined) -> plywood_db:delete(primary_tree, NodeKey);
+purge({Index, ChildId} = NodeKey, #{ children := Children, id := Id } = Parent) ->
+        NewParent = maps:put(children, [ Child || Child <- Children, Child /= NodeKey], Parent),
+        ok = plywood_db:store(primary_tree, {Index, Id}, NewParent),
+        purge(NodeKey, undefined).
+
+doCompaction([]) -> ok;
+doCompaction([{CurrNode, Parent} |Rest]) ->
+        case checkPrune(CurrNode) of
+                {true, []} ->
+                        ok = purge(CurrNode, Parent),
+                        doCompaction(Rest);
+                {false, Candidates} -> doCompaction(fastConcat(Rest, Candidates))
+        end.
+
+checkPrune(Id) ->
+        {ok, Node} = plywood_db:fetch(primary_tree, Id),
+        Data = case maps:find(data, Node) of
+                error       -> false;
+                {ok, []}    -> false;
+                {ok, _Data} -> true
+        end,
+        {Child, Candidates} = case maps:find(children, Node) of
+                {ok, Children} -> checkChildren(Node, Children);
+                error -> {false, []}
+        end,
+        Prune = not (Child or Data),
+        {Prune, Candidates}.
+
+checkChildren(_, []) -> {false, []};
+checkChildren(Parent, [Child |Rest]) ->
+        case checkPrune(Child) of
+                {true, []} ->
+                        purge(Child, Parent),
+                        checkChildren(Parent, Rest);
+                {false, Candidates} ->
+                        {true, fastConcat(Candidates, [{Candidate, Parent} || Candidate <- Rest])}
+        end.
