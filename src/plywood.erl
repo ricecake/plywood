@@ -193,10 +193,9 @@ map(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
 		error -> NewNode
 	end.
 
-transform(_Operator, []) -> ok;
-transform(Operator, [NodeKey |Rest]) when is_function(Operator), is_tuple(NodeKey) ->
+transform(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
 	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
-	case maps:find(data, Node) of
+	NewNode = case maps:find(data, Node) of
 		{ok, Data} ->
 			NewData = case Operator(Data, Id, Name) of
 				TransformedData when is_list(TransformedData) -> TransformedData;
@@ -205,7 +204,10 @@ transform(Operator, [NodeKey |Rest]) when is_function(Operator), is_tuple(NodeKe
 			maps:put(data, NewData, Node);
 		error -> Node
 	end,
-	transform(Operator, fastConcat(Rest, maps:get(children, Node, [])));
+	case maps:find(children, NewNode) of
+		{ok, Children} -> maps:put(children, [transform(Operator, Child) || Child <- Children], NewNode);
+		error -> NewNode
+	end.
 
 rewrite(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
 	{ok, Node} = plywood_db:fetch(primary_tree, NodeKey),
