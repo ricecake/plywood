@@ -199,7 +199,8 @@ map(Operator, NodeKey) when is_function(Operator), is_map(NodeKey) ->
 		error -> NewNode
 	end.
 
-transform(Operator, NodeKey) when is_function(Operator), is_map(NodeKey) ->
+transform(_Operator, []) -> ok;
+transform(Operator, [NodeKey |Rest]) when is_function(Operator), is_map(NodeKey) ->
 	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
 	NewNode = case maps:find(data, Node) of
 		{ok, Data} ->
