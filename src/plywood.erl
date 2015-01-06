@@ -37,7 +37,11 @@ delete(Index, Rev) when is_map(Rev) ->
 compact(Index) when is_binary(Index) ->
         doCompaction([{{Index, <<"/">>}, undefined}]).
 
-deleteByValue(_Index, _Value) -> ok.
+deleteByValue(Index, Field, Value) when is_binary(Index), is_binary(Field) ->
+	ok.
+	%traverse(fun(Datum, _, _) when is_map(Datum) ->
+	%
+	%)
 
 processOps() -> [aggregate, filter].
 
@@ -196,10 +200,26 @@ map(Operator, NodeKey) when is_function(Operator), is_map(NodeKey) ->
 	end.
 
 transform(Operator, NodeKey) when is_function(Operator), is_map(NodeKey) ->
+	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
+	NewNode = case maps:find(data, Node) of
+		{ok, Data} ->
+			NewData = case Operator(Data, Id, Name) of
+				TransformedData when is_list(TransformedData) -> TransformedData;
+				TransformedDatum -> [TransformedDatum]
+			end,
+			maps:put(data, NewData, Node);
+		error -> Node
+	end,
+	case maps:find(children, Node) of
+		{ok, Children} -> transform(Operator, fastConcat(Rest, Children));
+		error -> transform(Operator, Rest)
+	end.
+
+rewrite(Operator, NodeKey) when is_function(Operator), is_map(NodeKey) ->
 	{ok, Node} = plywood_db:fetch(primary_tree, NodeKey),
 	NewNode = Operator(Node),
 	case maps:find(children, NewNode) of
-		{ok, Children} -> maps:put(children, [transform(Operator, Child) || Child <- Children], NewNode);
+		{ok, Children} -> maps:put(children, [rewrite(Operator, Child) || Child <- Children], NewNode);
 		error -> NewNode
 	end.
 
