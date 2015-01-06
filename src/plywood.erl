@@ -160,10 +160,7 @@ traverse(Operator, [NodeKey |Rest]) when is_function(Operator), is_tuple(NodeKey
 		{ok, Data} -> [ Operator(Datum, Id, Name) || Datum <- Data];
 		error -> ok
 	end,
-	case maps:find(children, Node) of
-		{ok, Children} -> traverse(Operator, fastConcat(Rest, Children));
-		error -> traverse(Operator, Rest)
-	end.
+	traverse(Operator, fastConcat(Rest, maps:get(children, Node, [])));
 
 accumulate(_Operator, Acc, []) -> Acc;
 accumulate(Operator, Acc, [NodeKey |Rest]) when is_function(Operator), is_tuple(NodeKey) ->
@@ -172,10 +169,7 @@ accumulate(Operator, Acc, [NodeKey |Rest]) when is_function(Operator), is_tuple(
 		{ok, Data} -> lists:foldl(fun(Datum, AccIn) -> Operator(Datum, AccIn, Id, Name) end, Acc, Data);
 		error -> Acc
 	end,
-	case maps:find(children, Node) of
-		{ok, Children} -> accumulate(Operator, NodeAcc, fastConcat(Rest, Children));
-		error -> accumulate(Operator, NodeAcc, Rest)
-	end.
+	accumulate(Operator, NodeAcc, fastConcat(Rest, maps:get(children, Node, [])));
 
 filter(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
 	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
@@ -211,10 +205,7 @@ transform(Operator, [NodeKey |Rest]) when is_function(Operator), is_tuple(NodeKe
 			maps:put(data, NewData, Node);
 		error -> Node
 	end,
-	case maps:find(children, Node) of
-		{ok, Children} -> transform(Operator, fastConcat(Rest, Children));
-		error -> transform(Operator, Rest)
-	end.
+	transform(Operator, fastConcat(Rest, maps:get(children, Node, [])));
 
 rewrite(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
 	{ok, Node} = plywood_db:fetch(primary_tree, NodeKey),
@@ -229,10 +220,7 @@ erase([]) -> ok;
 erase([NodeKey |Rest]) when is_tuple(NodeKey) ->
 	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
 	plywood_db:delete(primary_tree, NodeKey),
-	case maps:find(children, Node) of
-		{ok, Children} -> erase(fastConcat(Rest, Children));
-		error -> erase(Rest)
-	end.
+	erase(fastConcat(Rest, maps:get(children, Node, [])));
 
 getOperator(aggregate, {Field, max}) -> fun(Tree) -> Tree end;
 getOperator(aggregate, {Field, min}) -> fun(Tree) -> Tree end;
