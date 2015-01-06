@@ -227,7 +227,7 @@ rewrite(Operator, [ {Index, _Id} = NodeKey |Rest]) when is_function(Operator) ->
 
 eraseBranch([]) -> ok;
 eraseBranch([NodeKey |Rest]) when is_tuple(NodeKey) ->
-	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
+	{ok, Node} = plywood_db:fetch(primary_tree, NodeKey),
 	plywood_db:delete(primary_tree, NodeKey),
 	eraseBranch(fastConcat(Rest, maps:get(children, Node, []))).
 
