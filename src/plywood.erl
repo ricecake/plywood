@@ -227,7 +227,7 @@ erase([]) -> ok;
 erase([NodeKey |Rest]) when is_tuple(NodeKey) ->
 	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
 	plywood_db:delete(primary_tree, NodeKey),
-	erase(fastConcat(Rest, maps:get(children, Node, [])));
+	erase(fastConcat(Rest, maps:get(children, Node, []))).
 
 getOperator(aggregate, {Field, max}) -> fun(Tree) -> Tree end;
 getOperator(aggregate, {Field, min}) -> fun(Tree) -> Tree end;
