@@ -154,7 +154,7 @@ makeNodeID([<<"/">>], _Sep) -> <<"/">>;
 makeNodeID(Parts, Sep) -> << << Sep/binary, Part/binary>> || Part <- Parts, Part =/= <<"/">> >>.
 
 traverse(_Operator, []) -> ok;
-traverse(Operator, [NodeKey |Rest]) when is_function(Operator), is_map(NodeKey) ->
+traverse(Operator, [NodeKey |Rest]) when is_function(Operator), is_tuple(NodeKey) ->
 	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
 	case maps:find(data, Node) of
 		{ok, Data} -> [ Operator(Datum, Id, Name) || Datum <- Data];
@@ -166,7 +166,7 @@ traverse(Operator, [NodeKey |Rest]) when is_function(Operator), is_map(NodeKey) 
 	end.
 
 accumulate(_Operator, Acc, []) -> Acc;
-accumulate(Operator, Acc, [NodeKey |Rest]) when is_function(Operator), is_map(NodeKey) ->
+accumulate(Operator, Acc, [NodeKey |Rest]) when is_function(Operator), is_tuple(NodeKey) ->
 	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
 	NodeAcc = case maps:find(data, Node) of
 		{ok, Data} -> lists:foldl(fun(Datum, AccIn) -> Operator(Datum, AccIn, Id, Name) end, Acc, Data);
@@ -177,7 +177,7 @@ accumulate(Operator, Acc, [NodeKey |Rest]) when is_function(Operator), is_map(No
 		error -> accumulate(Operator, NodeAcc, Rest)
 	end.
 
-filter(Operator, NodeKey) when is_function(Operator), is_map(NodeKey) ->
+filter(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
 	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
 	NewNode = case maps:find(data, Node) of
 		{ok, Data} -> maps:put(data, [ Datum || Datum <- Data, Operator(Datum, Id, Name)], Node);
@@ -188,7 +188,7 @@ filter(Operator, NodeKey) when is_function(Operator), is_map(NodeKey) ->
 		error -> NewNode
 	end.
 
-map(Operator, NodeKey) when is_function(Operator), is_map(NodeKey) ->
+map(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
 	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
 	NewNode = case maps:find(data, Node) of
 		{ok, Data} -> maps:put(data, [ Operator(Datum, Id, Name) || Datum <- Data], Node);
@@ -200,7 +200,7 @@ map(Operator, NodeKey) when is_function(Operator), is_map(NodeKey) ->
 	end.
 
 transform(_Operator, []) -> ok;
-transform(Operator, [NodeKey |Rest]) when is_function(Operator), is_map(NodeKey) ->
+transform(Operator, [NodeKey |Rest]) when is_function(Operator), is_tuple(NodeKey) ->
 	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
 	NewNode = case maps:find(data, Node) of
 		{ok, Data} ->
@@ -216,7 +216,7 @@ transform(Operator, [NodeKey |Rest]) when is_function(Operator), is_map(NodeKey)
 		error -> transform(Operator, Rest)
 	end.
 
-rewrite(Operator, NodeKey) when is_function(Operator), is_map(NodeKey) ->
+rewrite(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
 	{ok, Node} = plywood_db:fetch(primary_tree, NodeKey),
 	NewNode = Operator(Node),
 	case maps:find(children, NewNode) of
