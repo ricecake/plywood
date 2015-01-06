@@ -220,14 +220,14 @@ rewrite(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
 	NewChildren = maps:get(children, NewNode, []),
 	OldChildren = maps:get(children,    Node, []),
 	PurgeChildren = remove(OldChildren, NewChildren),
-	erase(PurgeChildren),
+	eraseBranch(PurgeChildren),
 	rewrite(Operator, fastConcat(Rest, Children)).
 
-erase([]) -> ok;
-erase([NodeKey |Rest]) when is_tuple(NodeKey) ->
+eraseBranch([]) -> ok;
+eraseBranch([NodeKey |Rest]) when is_tuple(NodeKey) ->
 	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
 	plywood_db:delete(primary_tree, NodeKey),
-	erase(fastConcat(Rest, maps:get(children, Node, []))).
+	eraseBranch(fastConcat(Rest, maps:get(children, Node, []))).
 
 getOperator(aggregate, {Field, max}) -> fun(Tree) -> Tree end;
 getOperator(aggregate, {Field, min}) -> fun(Tree) -> Tree end;
