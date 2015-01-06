@@ -214,14 +214,15 @@ transform(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
 		error -> NewNode
 	end.
 
-rewrite(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
+rewrite([]) -> ok;
+rewrite(Operator, [NodeKey |Rest]) when is_function(Operator), is_tuple(NodeKey) ->
 	{ok, Node} = plywood_db:fetch(primary_tree, NodeKey),
 	NewNode = Operator(Node),
 	NewChildren = maps:get(children, NewNode, []),
 	OldChildren = maps:get(children,    Node, []),
 	PurgeChildren = remove(OldChildren, NewChildren),
 	eraseBranch(PurgeChildren),
-	rewrite(Operator, fastConcat(Rest, Children)).
+	rewrite(Operator, fastConcat(Rest, NewChildren)).
 
 eraseBranch([]) -> ok;
 eraseBranch([NodeKey |Rest]) when is_tuple(NodeKey) ->
