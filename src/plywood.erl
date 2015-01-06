@@ -215,10 +215,10 @@ transform(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
 	end.
 
 rewrite(_Op, []) -> ok;
-rewrite(Operator, [ {Index, _Id} = NodeKey |Rest]) when is_function(Operator) ->
+rewrite(Operator, [NodeKey |Rest]) when is_function(Operator) ->
 	{ok, Node} = plywood_db:fetch(primary_tree, NodeKey),
-	#{ id := Id } = NewNode = Operator(Node),
-	ok = plywood_db:asyncStore(primary_tree, {Index, Id}, NewNode),
+	NewNode = Operator(Node),
+	ok = plywood_db:asyncStore(primary_tree, NodeKey, NewNode),
 	NewChildren = maps:get(children, NewNode, []),
 	OldChildren = maps:get(children,    Node, []),
 	PurgeChildren = remove(OldChildren, NewChildren),
