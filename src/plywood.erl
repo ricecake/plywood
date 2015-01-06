@@ -4,7 +4,7 @@
 -export([start/0]).
 
 %% Lookup/update exports
--export([lookup/2, lookup/3, add/2, delete/2, deleteByValue/2]).
+-export([lookup/2, lookup/3, add/2, delete/2, deleteByValue/3]).
 
 %% Processing exports
 -export([processTree/2, processOps/0]).
