@@ -160,7 +160,7 @@ traverse(Operator, [NodeKey |Rest]) when is_function(Operator), is_tuple(NodeKey
 		{ok, Data} -> [ Operator(Datum, Id, Name) || Datum <- Data];
 		error -> ok
 	end,
-	traverse(Operator, fastConcat(Rest, maps:get(children, Node, [])));
+	traverse(Operator, fastConcat(Rest, maps:get(children, Node, []))).
 
 accumulate(_Operator, Acc, []) -> Acc;
 accumulate(Operator, Acc, [NodeKey |Rest]) when is_function(Operator), is_tuple(NodeKey) ->
@@ -169,7 +169,7 @@ accumulate(Operator, Acc, [NodeKey |Rest]) when is_function(Operator), is_tuple(
 		{ok, Data} -> lists:foldl(fun(Datum, AccIn) -> Operator(Datum, AccIn, Id, Name) end, Acc, Data);
 		error -> Acc
 	end,
-	accumulate(Operator, NodeAcc, fastConcat(Rest, maps:get(children, Node, [])));
+	accumulate(Operator, NodeAcc, fastConcat(Rest, maps:get(children, Node, []))).
 
 
 recurseOnChildren(Func, Operator, #{ children := Children } = Node) ->
