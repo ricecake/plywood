@@ -219,9 +219,19 @@ transform(Operator, [NodeKey |Rest]) when is_function(Operator), is_tuple(NodeKe
 rewrite(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
 	{ok, Node} = plywood_db:fetch(primary_tree, NodeKey),
 	NewNode = Operator(Node),
-	case maps:find(children, NewNode) of
-		{ok, Children} -> maps:put(children, [rewrite(Operator, Child) || Child <- Children], NewNode);
-		error -> NewNode
+	NewChildren = maps:get(children, NewNode, []),
+	OldChildren = maps:get(children,    Node, []),
+	PurgeChildren = remove(OldChildren, NewChildren),
+	erase(PurgeChildren),
+	rewrite(Operator, fastConcat(Rest, Children));
+
+erase([]) -> ok;
+erase([NodeKey |Rest]) when is_tuple(NodeKey) ->
+	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
+	plywood_db:delete(primary_tree, NodeKey),
+	case maps:find(children, Node) of
+		{ok, Children} -> erase(fastConcat(Rest, Children));
+		error -> erase(Rest)
 	end.
 
 getOperator(aggregate, {Field, max}) -> fun(Tree) -> Tree end;
