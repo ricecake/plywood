@@ -202,7 +202,7 @@ map(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
 transform(_Operator, []) -> ok;
 transform(Operator, [NodeKey |Rest]) when is_function(Operator), is_tuple(NodeKey) ->
 	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
-	NewNode = case maps:find(data, Node) of
+	case maps:find(data, Node) of
 		{ok, Data} ->
 			NewData = case Operator(Data, Id, Name) of
 				TransformedData when is_list(TransformedData) -> TransformedData;
@@ -298,7 +298,7 @@ fastConcat(A,B) when length(A) > length(B) -> fastConcat(B,A);
 fastConcat(A,B) -> A++B.
 
 purge(NodeKey, undefined) -> plywood_db:delete(primary_tree, NodeKey);
-purge({Index, ChildId} = NodeKey, #{ children := Children, id := Id } = Parent) ->
+purge({Index, _ChildId} = NodeKey, #{ children := Children, id := Id } = Parent) ->
         NewParent = maps:put(children, [ Child || Child <- Children, Child /= NodeKey], Parent),
         ok = plywood_db:store(primary_tree, {Index, Id}, NewParent),
         purge(NodeKey, undefined).
