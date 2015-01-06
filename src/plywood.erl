@@ -171,6 +171,11 @@ accumulate(Operator, Acc, [NodeKey |Rest]) when is_function(Operator), is_tuple(
 	end,
 	accumulate(Operator, NodeAcc, fastConcat(Rest, maps:get(children, Node, [])));
 
+
+recurseOnChildren(Func, Operator, #{ children := Children } = Node) ->
+	maps:put(children, [Func(Operator, Child) || Child <- Children], Node);
+recurseOnChildren(_Func, _Op, Node) -> Node.
+
 filter(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
 	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
 	NewNode = case maps:find(data, Node) of
