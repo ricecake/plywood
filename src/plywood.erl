@@ -221,7 +221,7 @@ rewrite(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
 	OldChildren = maps:get(children,    Node, []),
 	PurgeChildren = remove(OldChildren, NewChildren),
 	erase(PurgeChildren),
-	rewrite(Operator, fastConcat(Rest, Children));
+	rewrite(Operator, fastConcat(Rest, Children)).
 
 erase([]) -> ok;
 erase([NodeKey |Rest]) when is_tuple(NodeKey) ->
