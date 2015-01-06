@@ -134,7 +134,9 @@ mergeNodes(#{children := Old} =Left, [{children, New} |Right]) ->
 mergeNodes(#{hasChildren := Old} =Left, [{hasChildren, New} |Right]) ->
         mergeNodes(maps:put(hasChildren, (Old or New), Left), Right);
 mergeNodes(#{hasData := Old} =Left, [{hasData, New} |Right]) ->
-        mergeNodes(maps:put(hasData, (Old or New), Left), Right).
+        mergeNodes(maps:put(hasData, (Old or New), Left), Right);
+mergeNodes(Left, [{Key, Value} |Right]) ->
+	mergeNodes(maps:put(Key, Value, Left), Right).
 
 compactNode(Node) when is_map(Node) ->
         maps:from_list([ {K, V} || {K, V} <- maps:to_list(Node), V =/= {#{}, []}]).
