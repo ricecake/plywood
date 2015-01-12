@@ -170,11 +170,6 @@ accumulate(Operator, Acc, [NodeKey |Rest]) when is_function(Operator), is_tuple(
 	end,
 	accumulate(Operator, NodeAcc, fastConcat(Rest, maps:get(children, Node, []))).
 
-
-recurseOnChildren(Func, Operator, #{ children := Children } = Node) ->
-	maps:put(children, [Func(Operator, Child) || Child <- Children], Node);
-recurseOnChildren(_Func, _Op, Node) -> Node.
-
 filter(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
 	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
 	NewNode = case maps:find(data, Node) of
@@ -213,8 +208,13 @@ transform(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
 		error -> NewNode
 	end.
 
-rewrite(_Op, []) -> ok;
-rewrite(Operator, [NodeKey |Rest]) when is_function(Operator) ->
+inlineRewrite(Operator, #{ children := Children } = Node) when is_function(Operator) ->
+        NewNode = Operator(Node),
+        maps:put(children, [inlineRewrite(Operator, Child) || Child <- Children], NewNode);
+inlineRewrite(Operator, Node) when is_function(Operator) -> Operator(Node).
+
+diskRewrite(_Op, []) -> ok;
+diskRewrite(Operator, [NodeKey |Rest]) when is_function(Operator) ->
 	{ok, Node} = plywood_db:fetch(primary_tree, NodeKey),
 	NewNode = Operator(Node),
 	ok = plywood_db:asyncStore(primary_tree, NodeKey, NewNode),
@@ -222,7 +222,7 @@ rewrite(Operator, [NodeKey |Rest]) when is_function(Operator) ->
 	OldChildren = maps:get(children,    Node, []),
 	PurgeChildren = remove(OldChildren, NewChildren),
 	eraseBranch(PurgeChildren),
-	rewrite(Operator, fastConcat(Rest, NewChildren)).
+	diskRewrite(Operator, fastConcat(Rest, NewChildren)).
 
 eraseBranch([]) -> ok;
 eraseBranch([NodeKey |Rest]) when is_tuple(NodeKey) ->
