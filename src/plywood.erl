@@ -170,31 +170,20 @@ accumulate(Operator, Acc, [NodeKey |Rest]) when is_function(Operator), is_tuple(
 	end,
 	accumulate(Operator, NodeAcc, fastConcat(Rest, maps:get(children, Node, []))).
 
-filter(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
-	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
-	NewNode = case maps:find(data, Node) of
+filter(Operator, Node) when is_function(Operator), is_map(Node) ->
+	case maps:find(data, Node) of
 		{ok, Data} -> maps:put(data, [ Datum || Datum <- Data, Operator(Datum, Id, Name)], Node);
 		error -> Node
-	end,
-	case maps:find(children, NewNode) of
-		{ok, Children} -> maps:put(children, [filter(Operator, Child) || Child <- Children], NewNode);
-		error -> NewNode
 	end.
 
-map(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
-	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
-	NewNode = case maps:find(data, Node) of
+map(Operator, Node) when is_function(Operator), is_map(Node) ->
+	case maps:find(data, Node) of
 		{ok, Data} -> maps:put(data, [ Operator(Datum, Id, Name) || Datum <- Data], Node);
 		error -> Node
-	end,
-	case maps:find(children, NewNode) of
-		{ok, Children} -> maps:put(children, [map(Operator, Child) || Child <- Children], NewNode);
-		error -> NewNode
 	end.
 
-transform(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
-	{ok, #{ id := Id, name := Name } = Node} = plywood_db:fetch(primary_tree, NodeKey),
-	NewNode = case maps:find(data, Node) of
+transform(Operator, Node) when is_function(Operator), is_map(Node) ->
+	case maps:find(data, Node) of
 		{ok, Data} ->
 			NewData = case Operator(Data, Id, Name) of
 				TransformedData when is_list(TransformedData) -> TransformedData;
@@ -202,19 +191,15 @@ transform(Operator, NodeKey) when is_function(Operator), is_tuple(NodeKey) ->
 			end,
 			maps:put(data, NewData, Node);
 		error -> Node
-	end,
-	case maps:find(children, NewNode) of
-		{ok, Children} -> maps:put(children, [transform(Operator, Child) || Child <- Children], NewNode);
-		error -> NewNode
 	end.
 
 inlineRewrite(Operator, #{ children := Children } = Node) when is_function(Operator) ->
         NewNode = Operator(Node),
         maps:put(children, [inlineRewrite(Operator, Child) || Child <- Children], NewNode);
-inlineRewrite(Operator, Node) when is_function(Operator) -> Operator(Node).
+inlineRewrite(Operator, Node) when is_function(Operator), is_map(Node) -> Operator(Node).
 
 diskRewrite(_Op, []) -> ok;
-diskRewrite(Operator, [NodeKey |Rest]) when is_function(Operator) ->
+diskRewrite(Operator, [NodeKey |Rest]) when is_function(Operator), is_tuple(NodeKey) ->
 	{ok, Node} = plywood_db:fetch(primary_tree, NodeKey),
 	NewNode = Operator(Node),
 	ok = plywood_db:asyncStore(primary_tree, NodeKey, NewNode),
