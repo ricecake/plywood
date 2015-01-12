@@ -47,7 +47,7 @@ processOps() -> [aggregate, filter].
 
 processTree(Tree, Opts) when is_map(Opts) ->
         OpList = buildOpList(undefined, [], Opts, processOps(), []),
-        applyTransforms(Tree, OpList).
+        inlineRewrite(applyTransforms(OpList), Tree).
 
 %% ------------------------------------------------------------------
 %% Internal Function Definitions
@@ -170,19 +170,19 @@ accumulate(Operator, Acc, [NodeKey |Rest]) when is_function(Operator), is_tuple(
 	end,
 	accumulate(Operator, NodeAcc, fastConcat(Rest, maps:get(children, Node, []))).
 
-filter(Operator, Node) when is_function(Operator), is_map(Node) ->
+filter(Operator, #{ id := Id, name := Name } = Node) when is_function(Operator) ->
 	case maps:find(data, Node) of
 		{ok, Data} -> maps:put(data, [ Datum || Datum <- Data, Operator(Datum, Id, Name)], Node);
 		error -> Node
 	end.
 
-map(Operator, Node) when is_function(Operator), is_map(Node) ->
+map(Operator, #{ id := Id, name := Name } = Node) when is_function(Operator) ->
 	case maps:find(data, Node) of
 		{ok, Data} -> maps:put(data, [ Operator(Datum, Id, Name) || Datum <- Data], Node);
 		error -> Node
 	end.
 
-transform(Operator, Node) when is_function(Operator), is_map(Node) ->
+transform(Operator, #{ id := Id, name := Name } = Node) when is_function(Operator) ->
 	case maps:find(data, Node) of
 		{ok, Data} ->
 			NewData = case Operator(Data, Id, Name) of
@@ -254,10 +254,10 @@ buildOpList(_Previous, [], OpsMap, [Class | Rest], List) ->
         end;
 buildOpList(_Last, [], #{}, _Seq, List) -> List.
 
-applyTransforms(Tree, []) -> Tree;
-applyTransforms(Tree, [Op | Rest]) ->
-        NewTree = Op(Tree),
-        applyTransforms(NewTree, Rest).
+applyTransforms(Ops) when is_list(Ops) ->
+        fun(Node) when is_map(Node) ->
+                lists:foldl(fun(Op, NodeIn) when is_function(Op), is_map(NodeIn)-> Op(NodeIn) end, Node, Ops)
+        end.
 
 buildFilterFun(Op, <<"name">>) -> 
         fun(Tree) ->
