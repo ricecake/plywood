@@ -46,8 +46,10 @@ deleteByValue(Index, Field, Value) when is_binary(Index), is_binary(Field) ->
 processOps() -> [aggregate, filter].
 
 processTree(Tree, Opts) when is_map(Opts) ->
-        OpList = buildOpList(undefined, [], Opts, processOps(), []),
-        inlineRewrite(applyTransforms(OpList), Tree).
+        case buildOpList(undefined, [], Opts, processOps(), []) of
+                [] -> Tree;
+                OpList -> inlineRewrite(applyTransforms(OpList), Tree)
+        end.
 
 %% ------------------------------------------------------------------
 %% Internal Function Definitions
