@@ -69,7 +69,7 @@ handle_call({delete, Index, Data}, _From, State) ->
         ok = plywood:delete(Index, jiffy:decode(Data, [return_maps])),
         {stop, normal, ok, State};
 handle_call({lookup, Index, Path, Opts}, _From, State) ->
-        Return = try plywood:lookup(Index, Path, maps:get(<<"depth">>, Opts, 1)) of
+        Return = try plywood:lookup(Index, Path, maps:get(depth, Opts, 1)) of
                 Data -> {ok, jiffy:encode(plywood:processTree(Data, Opts))}
         catch
                 Error -> Error

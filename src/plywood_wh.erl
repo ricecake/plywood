@@ -12,7 +12,7 @@ init(Req, Opts) ->
 
 process(<<"GET">>, _Body, Req) ->
 	Index = cowboy_req:binding(index, Req),
-        Opts = cowboy_req:match_qs([{truncate, int, 1}], Req),
+        Opts = maps:from_list(cowboy_req:parse_qs(Req)),
 	Path = cowboy_req:path_info(Req),
 	lookup(Index, Path, Opts, Req);
 process(<<"POST">>, _Body, Req) ->
@@ -65,6 +65,8 @@ cleanOptions([{Class, Value} | Rest], Accum) ->
         cleanOptions(Rest, appendMap(NewKey, NewVal, Accum)).
 
 
+cleanField(<<"depth">>, Depth) when is_binary(Depth) ->
+        {depth, erlang:binary_to_integer(Depth)};
 cleanField(<<"filter">>, #{ <<"field">> := Field, <<"op">> := Op, <<"value">> := Val }) ->
         {filter, {Field, binary_to_existing_atom(Op, utf8), Val}};
 cleanField(Field, Value) -> {Field, Value}.

@@ -6,6 +6,7 @@
   {applications, [
                   kernel,
                   stdlib,
+                  lager,
                   cowboy
                  ]},
   {mod, { plywood_app, []}},
