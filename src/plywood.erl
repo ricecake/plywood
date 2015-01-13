@@ -291,9 +291,11 @@ fastConcat(A,B) when length(A) > length(B) -> fastConcat(B,A);
 fastConcat(A,B) -> A++B.
 
 purge(NodeKey, undefined) -> plywood_db:delete(primary_tree, NodeKey);
-purge({Index, _ChildId} = NodeKey, #{ children := Children, id := Id } = Parent) ->
+purge({Index, _ChildId} = NodeKey, #{ children := Children, id := Id }) ->
+	ParentKey = {Index, Id},
+	{ok, Parent} = plywood_db:fetch(primary_tree, ParentKey),
         NewParent = maps:put(children, [ Child || Child <- Children, Child /= NodeKey], Parent),
-        ok = plywood_db:store(primary_tree, {Index, Id}, NewParent),
+        ok = plywood_db:store(primary_tree, ParentKey, NewParent),
         purge(NodeKey, undefined).
 
 doCompaction([]) -> ok;
