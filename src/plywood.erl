@@ -7,7 +7,7 @@
 -export([lookup/2, lookup/3, add/2, delete/2, deleteByValue/3]).
 
 %% Processing exports
--export([processTree/2, processOps/0]).
+-export([processTree/2, mutateTree/2, processOps/0]).
 
 -compile(export_all).
 %% ------------------------------------------------------------------
@@ -37,18 +37,18 @@ delete(Index, Rev) when is_map(Rev) ->
 compact(Index) when is_binary(Index) ->
         doCompaction([{{Index, <<"/">>}, undefined}]).
 
-deleteByValue(Index, Field, Value) when is_binary(Index), is_binary(Field) ->
-	ok.
-	%traverse(fun(Datum, _, _) when is_map(Datum) ->
-	%
-	%)
-
 processOps() -> [aggregate, filter].
 
 processTree(Tree, Opts) when is_map(Opts) ->
         case buildOpList(undefined, [], Opts, processOps(), []) of
                 [] -> Tree;
                 OpList -> inlineRewrite(applyTransforms(OpList), Tree)
+        end.
+
+mutateTree(Tree, Opts) when is_map(Opts) ->
+        case buildOpList(undefined, [], Opts, processOps(), []) of
+                [] -> Tree;
+                OpList -> diskRewrite(applyTransforms(OpList), Tree)
         end.
 
 %% ------------------------------------------------------------------
