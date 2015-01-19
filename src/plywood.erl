@@ -107,11 +107,11 @@ doMakeTree(Index, [{[{Name, Data} | RestLevel], Path} | Rest], Op) when is_list(
 mergeStore(Index, #{id := Id} = Data) ->
         Key = {Index, Id},
         case plywood_db:getIfExists(primary_tree, Key) of
-                false -> plywood_db:asyncStore(primary_tree, Key, Data);
+                false -> plywood_db:store(primary_tree, Key, Data);
                 {ok, OldNode} ->
 			case mergeNodes(OldNode, maps:to_list(Data)) of
 				OldNode -> ok;
-				NewNode -> plywood_db:asyncStore(primary_tree, Key, NewNode)
+				NewNode -> plywood_db:store(primary_tree, Key, NewNode)
 			end
         end.
 
@@ -122,7 +122,7 @@ deMergeStore(Index, #{id := Id} = Data) ->
                 {ok, OldNode} ->
 			case deMergeNodes(OldNode, Data) of
 				noop -> ok;
-				NewNode -> plywood_db:asyncStore(primary_tree, Key, NewNode)
+				NewNode -> plywood_db:store(primary_tree, Key, NewNode)
 			end
         end.
 
@@ -204,7 +204,7 @@ diskRewrite(_Op, []) -> ok;
 diskRewrite(Operator, [NodeKey |Rest]) when is_function(Operator), is_tuple(NodeKey) ->
 	{ok, Node} = plywood_db:fetch(primary_tree, NodeKey),
 	NewNode = Operator(Node),
-	ok = plywood_db:asyncStore(primary_tree, NodeKey, NewNode),
+	ok = plywood_db:store(primary_tree, NodeKey, NewNode),
 	NewChildren = maps:get(children, NewNode, []),
 	OldChildren = maps:get(children,    Node, []),
 	PurgeChildren = remove(OldChildren, NewChildren),
