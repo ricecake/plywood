@@ -1,5 +1,5 @@
 ## Name of the node
--sname plywood
+-name plywood
 
 ## Cookie for distributed erlang
 -setcookie plywood
