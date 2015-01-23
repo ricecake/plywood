@@ -66,7 +66,7 @@ package.src: deps
 	for dep in package/$(PKG_ID)/deps/*; do \
              echo "Processing dep: $${dep}"; \
              mkdir -p $${dep}/priv; \
-             git --git-dir=$${dep}/.git describe --tags >$${dep}/priv/vsn.git; \
+             echo `git --git-dir=$${dep}/.git describe --tags || echo '0.01'` >$${dep}/priv/vsn.git; \
         done
 	find package/$(PKG_ID) -depth -name ".git" -exec rm -rf {} \;
 	tar -C package -czf package/$(PKG_ID).tar.gz $(PKG_ID)
