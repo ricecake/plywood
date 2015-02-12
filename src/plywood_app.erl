@@ -15,9 +15,10 @@ start(_StartType, _StartArgs) ->
 	    {'_', [
 			{"/tree/:index/[...]", plywood_wh, []},
 			{"/view/:index", plywood_viz, []},
-			{"/[...]",     cowboy_static, {priv_dir, plywood, "html/"}},
-			{"/js/[...]",  cowboy_static, {priv_dir, plywood, "js/"  }},
-			{"/css/[...]", cowboy_static, {priv_dir, plywood, "css/" }}
+			{"/mutate/:index", plywood_modify, []},
+			{"/[...]",         cowboy_static, {priv_dir, plywood, "html/"}},
+			{"/js/[...]",      cowboy_static, {priv_dir, plywood, "js/"  }},
+			{"/css/[...]",     cowboy_static, {priv_dir, plywood, "css/" }}
 		]}
 	]),
 	{ok, _} = cowboy:start_http(http, 25, [{port, 8080}],
