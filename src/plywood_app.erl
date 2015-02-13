@@ -12,7 +12,7 @@
 start(_StartType, _StartArgs) ->
 	{ok, Pid} = plywood_sup:start_link(),
 	Dispatch  = cowboy_router:compile([
-	    {'_', [
+		{'_', [
 			{"/tree/:index/[...]", plywood_wh,     []},
 			{"/view/:index",       plywood_viz,    []},
 			{"/mutate/:index",     plywood_modify, []},
@@ -30,3 +30,4 @@ start(_StartType, _StartArgs) ->
 
 stop(_State) ->
 	ok.
+
