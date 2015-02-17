@@ -1,3 +1,1 @@
-- add handler
-- move plywood_wh functions into common library
-- flesh out plywood_modify.erl
+- flesh out plywood_modify.erl from web handler
