@@ -11,13 +11,13 @@ init(Req, Opts) ->
 process(<<"POST">>, _Body, Req) ->
 	Index             = cowboy_req:binding(index, Req),
 	{ok, Opts, Req2}  = cowboy_req:body(Req, [{length, 1000000}]),
-	lookup(Index, Path, jiffy:decode(Opts, [return_maps]), Req2);
+	mutate(Index, jiffy:decode(Opts, [return_maps]), Req2);
 
 process(_, _, Req) ->
 	%% Bad Request
 	cowboy_req:reply(400, Req).
 
-mutate(Index, Spec) ->
+mutate(Index, Spec, Req) ->
 	NewSpec = plywood_wh_utils:cleanOptions(maps:to_list(Spec), #{}),
 	case plywood_worker:mutate(Index, NewSpec) of
 		ok ->

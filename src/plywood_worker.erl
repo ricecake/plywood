@@ -10,6 +10,7 @@
 -export([add/2, add/3, add/4]).
 -export([delete/2, delete/3, delete/4]).
 -export([lookup/3, lookup/4, lookup/5]).
+-export([mutate/3, mutate/4]).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -55,6 +56,12 @@ lookup(Pid, Index, Path, Opts) ->
 lookup(Pid, Index, Path, Opts, Timeout) ->
 	gen_server:call(Pid, {lookup, Index, Path, Opts}, Timeout).
 
+mutate(Pid, Index, Opts) ->
+	mutate(Pid, Index, Opts, infinity).
+
+mutate(Pid, Index, Opts, Timeout) ->
+	gen_server:call(Pid, {mutate, Index, Opts}, Timeout).
+
 %% ------------------------------------------------------------------
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
@@ -75,8 +82,16 @@ handle_call({lookup, Index, Path, Opts}, _From, State) ->
                 Error -> Error
         end,
 	{stop, normal, Return, State};
+handle_call({mutate, Index, Opts}, _From, State) ->
+	Return = try plywood:mutateTree(Index, Opts) of
+		ok -> ok
+	catch
+		Error -> Error
+	end,
+	{stop, normal, Return, State};
 handle_call(_Request, _From, State) ->
         {reply, ok, State}.
+
 handle_cast(_Msg, State) ->
         {noreply, State}.
 
