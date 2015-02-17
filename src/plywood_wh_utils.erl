@@ -1,14 +1,6 @@
 -module(plywood_wh_utils).
 
--export([appendMap/3, cleanOptions/2, cleanField/2, insert/3, remove/3]).
-
-insert(Index, Data, Req) ->
-	ok = plywood_worker:add(Index, Data),
-	cowboy_req:reply(200, Req).
-
-remove(Index, Data, Req) ->
-	ok = plywood_worker:delete(Index, Data),
-	cowboy_req:reply(200, Req).
+-export([appendMap/3, cleanOptions/2, cleanField/2]).
 
 cleanOptions([], Accum) ->
 	Accum;

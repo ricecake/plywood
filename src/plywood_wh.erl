@@ -23,7 +23,7 @@ process(<<"POST">>, _Body, Req) ->
 process(<<"PUT">>, true, Req) ->
 	Index            = cowboy_req:binding(index, Req),
 	{ok, Data, Req2} = cowboy_req:body(Req, [{length, 100000000}]),
-	plywood_wh_utils:insert(Index, Data, Req2);
+	insert(Index, Data, Req2);
 
 process(<<"PUT">>, false, Req) ->
 	cowboy_req:reply(400, [], <<"Missing body.">>, Req);
@@ -31,7 +31,7 @@ process(<<"PUT">>, false, Req) ->
 process(<<"DELETE">>, true, Req) ->
 	Index = cowboy_req:binding(index, Req),
 	{ok, Data, Req2} = cowboy_req:body(Req, [{length, 100000000}]),
-	plywood_wh_utils:remove(Index, Data, Req2);
+	remove(Index, Data, Req2);
 
 process(<<"DELETE">>, false, Req) ->
 	cowboy_req:reply(400, [], <<"Missing body.">>, Req);
@@ -50,4 +50,12 @@ lookup(Index, Path, Opts, Req) ->
 		{not_found, Index} -> cowboy_req:reply(404, [], <<"Not Found">>, Req);
 		_Error             -> cowboy_req:reply(418, [], <<"Error">>, Req)
 	end.
+
+insert(Index, Data, Req) ->
+	ok = plywood_worker:add(Index, Data),
+	cowboy_req:reply(200, Req).
+
+remove(Index, Data, Req) ->
+	ok = plywood_worker:delete(Index, Data),
+	cowboy_req:reply(200, Req).
 
