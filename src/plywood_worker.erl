@@ -10,7 +10,7 @@
 -export([add/2, add/3, add/4]).
 -export([delete/2, delete/3, delete/4]).
 -export([lookup/3, lookup/4, lookup/5]).
--export([mutate/3, mutate/4]).
+-export([mutate/2, mutate/3, mutate/4]).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -56,6 +56,10 @@ lookup(Pid, Index, Path, Opts) ->
 lookup(Pid, Index, Path, Opts, Timeout) ->
 	gen_server:call(Pid, {lookup, Index, Path, Opts}, Timeout).
 
+mutate(Index, Opts) ->
+	{ok, Pid} = plywood_work_sup:getWorker(),
+	mutate(Pid, Index, Opts).
+
 mutate(Pid, Index, Opts) ->
 	mutate(Pid, Index, Opts, infinity).
 
@@ -84,7 +88,7 @@ handle_call({lookup, Index, Path, Opts}, _From, State) ->
 	{stop, normal, Return, State};
 handle_call({mutate, Index, Opts}, _From, State) ->
 	Return = try plywood:mutateTree(Index, Opts) of
-		ok -> ok
+		ok -> plywood:compact(Index)
 	catch
 		Error -> Error
 	end,

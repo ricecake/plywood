@@ -48,7 +48,7 @@ processTree(Tree, Opts) when is_map(Opts) ->
 mutateTree(Tree, Opts) when is_map(Opts) ->
         case buildOpList(undefined, [], Opts, processOps(), []) of
                 [] -> Tree;
-                OpList -> diskRewrite(applyTransforms(OpList), Tree)
+                OpList -> diskRewrite(applyTransforms(OpList), [{Tree, <<"/">>}])
         end.
 
 %% ------------------------------------------------------------------

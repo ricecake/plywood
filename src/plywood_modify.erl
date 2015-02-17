@@ -28,5 +28,6 @@ mutate(Index, Spec, Req) ->
 			);
 		{not_found, Index} -> cowboy_req:reply(404, [], <<"Not Found">>, Req);
 		_Error             -> cowboy_req:reply(500, [], <<"Error">>, Req)
+
 	end.
 
