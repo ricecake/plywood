@@ -50,17 +50,19 @@ Building on Linux
 git clone https://github.com/ricecake/plywood.git
 cd plywood
 ./rebar get-deps co
-scripts/start_plywood.sh
+make package
 ```
 
-If you have gnu screen it will have tried to start
-a screen named "plywood", if not you will now be in
-an erlang shell now (as the software develops you will
-just be able to start the server as a regular daemon,
-no more screen or shell to have it running).
+This will make a package for your system's package manager,
+see your package manager's documentation (man rpm|man dpkg)
+to determine how to install the package.
+
+Once you have the package installed, the software can be
+started and stopped:
 
 ```
-application:ensure_all_started(plywood).
+plywood start
+plywood stop
 ```
 
 Basic Usage
