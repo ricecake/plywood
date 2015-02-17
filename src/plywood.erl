@@ -45,10 +45,10 @@ processTree(Tree, Opts) when is_map(Opts) ->
                 OpList -> inlineRewrite(applyTransforms(OpList), Tree)
         end.
 
-mutateTree(Tree, Opts) when is_map(Opts) ->
+mutateTree(Index, Opts) when is_map(Opts) ->
         case buildOpList(undefined, [], Opts, processOps(), []) of
-                [] -> Tree;
-                OpList -> diskRewrite(applyTransforms(OpList), [{Tree, <<"/">>}])
+                [] -> ok;
+                OpList -> diskRewrite(applyTransforms(OpList), [{Index, <<"/">>}])
         end.
 
 %% ------------------------------------------------------------------
