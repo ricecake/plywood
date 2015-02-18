@@ -17,6 +17,11 @@ use vars qw/*name *dir *prune/;
 use Data::Dumper qw(Dumper);
 use JSON;
 use HTTP::Tiny;
+use Data::UUID;
+
+my $ug   = Data::UUID->new;
+my $uuid = $ug->to_string($ug->create);
+
 my $struct;
 my $prefix;
 my $IndexId;
@@ -36,6 +41,7 @@ sub wanted {
 				@{$data}{qw(mode size atime mtime ctime)} = (stat($_))[2,7,8,9,10];
 				$data->{mode} &&= sprintf("%o", $data->{mode});
 				$data->{time} = $IndexId;
+				$data->{key}  = $uuid;
 				push(@{$node->{$part}}, $data);
 			}
 			else {
