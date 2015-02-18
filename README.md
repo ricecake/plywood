@@ -43,8 +43,21 @@ a source install from the Erlang github repo:
 Building and Running Plywood
 ============================
 
-Building on Linux
------------------
+Building
+--------
+
+Debian 8 With System Erlang
+---------------------------
+
+Run this prior to the regular linux instructions
+
+```
+sudo apt-get install erlang-manpages erlang-doc erlang-mode \
+  libcerf-doc gcc g++ make
+```
+
+Linux
+-----
 
 ```
 git clone https://github.com/ricecake/plywood.git
