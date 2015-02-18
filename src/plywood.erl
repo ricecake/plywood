@@ -7,9 +7,8 @@
 -export([lookup/2, lookup/3, add/2, delete/2]).
 
 %% Processing exports
--export([processTree/2, mutateTree/2, processOps/0]).
+-export([processTree/2, mutateTree/2, processOps/0, comapct/1]).
 
--compile(export_all).
 %% ------------------------------------------------------------------
 %% API Function Definitions
 %% ------------------------------------------------------------------
