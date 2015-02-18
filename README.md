@@ -73,7 +73,7 @@ instance the Perl5 script with a directory to
 index as the argument:
 
 ```
-perl test-data.pl /home/shane/Downloads/
+perl index_directory_test.pl /home/USERNAME/Downloads/
 ```
 
 this will produce the key that is used for storage:
@@ -89,13 +89,40 @@ And if you want the JSON structure for a sub-dir:
 
   http://localhost:8080/tree/home-USERNAME-Downloads/isos/
 
-Search semantics (much like GNU find) is on its way.
+With the script given above we place a "key" on each node in
+the index. If you use a construct like this in your index you
+will be able to use the "mutate" functionality available in
+Plywood to remove all nodes that have that key on them. For
+practical purposes if you were indexing filesystems like you
+are in the above Perl script, each index of that filesystem
+could be indentified by that key and be removed at any given point
+without removing other trees that were merged in given a different
+key.
+
+For example in "index_directory_test.pl":
+
+```
+$data->{key}  = $uuid;
+```
+
+Could be changed to anything you wanted it to be, and you could pick
+something different for each run. Then you could use the following
+one liner to remove all nodes with key set to a single type:
+
+```
+curl -d '{"filter":{"field":"key","op":"!=","value":"$YOURKEY"}}' \
+  http://localhost:8080/mutate/home-USERNAME-Downloads
+```
+
+The syntax also provides lots of other ways in which you could
+mutate the tree, when we're further ahead in release and have less
+moving parts and changing parts we'll have docs prepared with all
+the options.
 
 Output
 ======
 
-Once you get this far you'll be able to start pulling
-data out of plywood. The structure is basically as such:
+When retrieveing a tree with "tree" The structure is basically as such:
 
 ```
 {"name":"asdf","id":"/asdf","children":
