@@ -46,8 +46,20 @@ Building and Running Plywood
 Building
 --------
 
-Debian 8 With System Erlang
----------------------------
+CentOS 7
+--------
+
+System Erlang will be a pain, use Erlang Solutions: https://www.erlang-solutions.com/downloads
+
+Debian 7
+--------
+
+System Erlang will not work, use Erlang Solutions: https://www.erlang-solutions.com/downloads
+
+Debian 8 / Ubuntu 14
+-----------------
+
+System Erlang will work here.
 
 Run this prior to the regular linux instructions
 
@@ -68,13 +80,18 @@ make package
 
 This will make a package for your system's package manager,
 see your package manager's documentation (man rpm|man dpkg)
-to determine how to install the package.
+to determine how to install the package. It will show up in:
+
+```
+cd package/packages/
+```
 
 Once you have the package installed, the software can be
-started and stopped:
+started and stopped. It will listen on 8080 by default.
 
 ```
 plywood start
+curl -v http://localhost:8080/tree/nonexistent
 plywood stop
 ```
 
